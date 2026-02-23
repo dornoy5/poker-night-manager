@@ -1,4 +1,7 @@
-const API_URL = 'http://localhost:5000/api';
+const API_URL = import.meta.env.PROD
+  ? 'https://poker-night-api.onrender.com/api'
+  : 'http://localhost:5000/api';
+
 
 export async function createGame(gameData) {
   const res = await fetch(`${API_URL}/games`, {
