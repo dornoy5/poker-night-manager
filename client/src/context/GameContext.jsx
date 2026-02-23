@@ -1,5 +1,6 @@
-import { createContext, useContext, useReducer } from 'react';
+import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
 import { generateId } from '../utils/helpers';
+import { createGame, updateGame, getGame } from '../api/gameApi';
 
 const GameContext = createContext(null);
 const GameDispatchContext = createContext(null);
@@ -11,10 +12,17 @@ const initialState = {
   currency: '₪',
   players: [],
   gameStartedAt: null,
+  _id: null,
 };
 
 function gameReducer(state, action) {
   switch (action.type) {
+    case 'LOAD_GAME':
+      return { ...action.payload };
+
+    case 'SET_DB_ID':
+      return { ...state, _id: action.payload };
+
     case 'SET_BUYIN':
       return { ...state, buyIn: action.payload };
 
@@ -118,7 +126,7 @@ function gameReducer(state, action) {
     }
 
     case 'NEW_GAME':
-      return { ...initialState };
+      return { ...initialState, _id: null };
 
     default:
       return state;
@@ -127,6 +135,72 @@ function gameReducer(state, action) {
 
 export function GameProvider({ children }) {
   const [state, dispatch] = useReducer(gameReducer, initialState);
+
+  // Try to load an active game from the database on startup
+  useEffect(() => {
+    const activeGameId = localStorage.getItem('activeGameId');
+    if (activeGameId) {
+      getGame(activeGameId)
+        .then((game) => {
+          if (game && !game.error) {
+            const loaded = {
+              ...game,
+              players: game.players.map((p) => ({
+                ...p,
+                id: p._id || p.id || generateId(),
+              })),
+            };
+            dispatch({ type: 'LOAD_GAME', payload: loaded });
+          } else {
+            localStorage.removeItem('activeGameId');
+          }
+        })
+        .catch(() => {
+          localStorage.removeItem('activeGameId');
+        });
+    }
+  }, []);
+
+  // Save to database whenever state changes (after game is created)
+  const syncToDb = useCallback(async () => {
+    if (state.phase === 'setup' && !state._id) return;
+
+    try {
+      if (!state._id) {
+        const saved = await createGame({
+          phase: state.phase,
+          buyIn: state.buyIn,
+          chipsPerBuyIn: state.chipsPerBuyIn,
+          currency: state.currency,
+          players: state.players,
+          gameStartedAt: state.gameStartedAt,
+        });
+        if (saved._id) {
+          dispatch({ type: 'SET_DB_ID', payload: saved._id });
+          localStorage.setItem('activeGameId', saved._id);
+        }
+      } else {
+        await updateGame(state._id, {
+          phase: state.phase,
+          buyIn: state.buyIn,
+          chipsPerBuyIn: state.chipsPerBuyIn,
+          currency: state.currency,
+          players: state.players,
+          gameStartedAt: state.gameStartedAt,
+        });
+
+        if (state.phase === 'settled') {
+          localStorage.removeItem('activeGameId');
+        }
+      }
+    } catch (err) {
+      console.error('Failed to sync game:', err);
+    }
+  }, [state]);
+
+  useEffect(() => {
+    syncToDb();
+  }, [state.phase, state.players, syncToDb]);
 
   return (
     <GameContext.Provider value={state}>
