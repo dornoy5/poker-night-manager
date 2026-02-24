@@ -317,13 +317,13 @@ export default function GameScreen() {
             </div>
             <div className="modal__actions">
               <button
-                className="btn btn--secondary"
+                className="btn btn--danger"
                 onClick={() => setCashoutModalPlayer(null)}
               >
                 Cancel
               </button>
               <button
-                className="btn btn--danger"
+                className="btn btn--primary"
                 onClick={() => {
                   const chips = Number(cashoutAmount);
                   if (isNaN(chips) || chips < 0) {

@@ -96,6 +96,7 @@ h1, h2, h3 {
 .header {
   text-align: center;
   padding: 24px 0 32px;
+  position: relative;
 }
 
 .header__logo {

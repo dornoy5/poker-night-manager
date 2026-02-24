@@ -10,11 +10,15 @@ app.use(cors());
 app.use(express.json());
 
 // Routes
+const authRoutes = require('./routes/auth');
 const gameRoutes = require('./routes/games');
 const playerRoutes = require('./routes/players');
+const groupRoutes = require('./routes/groups');
 
+app.use('/api/auth', authRoutes);
 app.use('/api/games', gameRoutes);
 app.use('/api/players', playerRoutes);
+app.use('/api/groups', groupRoutes);
 
 // Health check
 app.get('/api/health', (req, res) => {
