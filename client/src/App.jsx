@@ -5,6 +5,7 @@ import { ToastProvider } from './context/ToastContext';
 import LoginScreen from './components/LoginScreen';
 import GroupsScreen from './components/GroupsScreen';
 import GroupDetailScreen from './components/GroupDetailScreen';
+import GameHistoryDetailScreen from './components/GameHistoryDetailScreen';
 import SetupScreen from './components/SetupScreen';
 import GameScreen from './components/GameScreen';
 import CashoutScreen from './components/CashoutScreen';
@@ -40,11 +41,12 @@ function GameContent({ onBackToGroup, groupName }) {
   );
 }
 
-// view: 'groups' | 'detail' | 'game'
+// view: 'groups' | 'detail' | 'game' | 'history'
 function AppContent() {
   const { user, loading } = useAuth();
   const [view, setView] = useState('groups');
   const [selectedGroup, setSelectedGroup] = useState(null);
+  const [selectedGame, setSelectedGame] = useState(null);
 
   if (loading) {
     return (
@@ -74,6 +76,16 @@ function AppContent() {
         group={selectedGroup}
         onBack={() => { setSelectedGroup(null); setView('groups'); }}
         onNewGame={() => setView('game')}
+        onSelectGame={(game) => { setSelectedGame(game); setView('history'); }}
+      />
+    );
+  }
+
+  if (view === 'history') {
+    return (
+      <GameHistoryDetailScreen
+        game={selectedGame}
+        onBack={() => { setSelectedGame(null); setView('detail'); }}
       />
     );
   }

@@ -15,7 +15,7 @@ function getWinner(players) {
     .sort((a, b) => b.profit - a.profit)[0];
 }
 
-export default function GroupDetailScreen({ group, onBack, onNewGame }) {
+export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGame }) {
   const { user } = useAuth();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -131,7 +131,8 @@ export default function GroupDetailScreen({ group, onBack, onNewGame }) {
               <div
                 key={game._id}
                 className="player-row animate-in"
-                style={{ animationDelay: `${index * 40}ms`, cursor: 'default' }}
+                style={{ animationDelay: `${index * 40}ms`, cursor: 'pointer' }}
+                onClick={() => onSelectGame(game)}
               >
                 <div
                   style={{
