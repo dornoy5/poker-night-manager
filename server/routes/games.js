@@ -1,11 +1,27 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const Game = require('../models/Game');
+const Group = require('../models/Group');
+
+const JWT_SECRET = process.env.JWT_SECRET || 'poker-night-secret-key';
+
+function auth(req, res, next) {
+  try {
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'No token' });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
 
 // Create a new game
-router.post('/', async (req, res) => {
+router.post('/', auth, async (req, res) => {
   try {
-    const game = new Game(req.body);
+    const game = new Game({ ...req.body, createdBy: req.userId });
     const saved = await game.save();
     res.status(201).json(saved);
   } catch (err) {
@@ -13,18 +29,29 @@ router.post('/', async (req, res) => {
   }
 });
 
-// Get all games (history)
-router.get('/', async (req, res) => {
+// Get games — filter by groupId if provided, otherwise all games for the user
+router.get('/', auth, async (req, res) => {
   try {
-    const games = await Game.find().sort({ createdAt: -1 });
+    if (req.query.groupId) {
+      // Verify the requesting user is a member of that group
+      const group = await Group.findById(req.query.groupId);
+      if (!group) return res.status(404).json({ error: 'Group not found' });
+      const isMember = group.members.some((m) => m.toString() === req.userId);
+      if (!isMember) return res.status(403).json({ error: 'Not authorized' });
+    }
+
+    const filter = req.query.groupId
+      ? { groupId: req.query.groupId }
+      : { createdBy: req.userId };
+    const games = await Game.find(filter).sort({ createdAt: -1 });
     res.json(games);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Get single game
-router.get('/:id', async (req, res) => {
+// Get single game (auth required, no ownership check — allows sharing a game link)
+router.get('/:id', auth, async (req, res) => {
   try {
     const game = await Game.findById(req.params.id);
     if (!game) return res.status(404).json({ error: 'Game not found' });
@@ -34,25 +61,33 @@ router.get('/:id', async (req, res) => {
   }
 });
 
-// Update game state
-router.put('/:id', async (req, res) => {
+// Update game state (owner only)
+router.put('/:id', auth, async (req, res) => {
   try {
-    const game = await Game.findByIdAndUpdate(req.params.id, req.body, {
+    const game = await Game.findById(req.params.id);
+    if (!game) return res.status(404).json({ error: 'Game not found' });
+    if (game.createdBy && game.createdBy.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    const updated = await Game.findByIdAndUpdate(req.params.id, req.body, {
       new: true,
       runValidators: true,
     });
-    if (!game) return res.status(404).json({ error: 'Game not found' });
-    res.json(game);
+    res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });
   }
 });
 
-// Delete a game
-router.delete('/:id', async (req, res) => {
+// Delete a game (owner only)
+router.delete('/:id', auth, async (req, res) => {
   try {
-    const game = await Game.findByIdAndDelete(req.params.id);
+    const game = await Game.findById(req.params.id);
     if (!game) return res.status(404).json({ error: 'Game not found' });
+    if (game.createdBy && game.createdBy.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Not authorized' });
+    }
+    await Game.findByIdAndDelete(req.params.id);
     res.json({ message: 'Game deleted' });
   } catch (err) {
     res.status(500).json({ error: err.message });

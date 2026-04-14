@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useGame, useGameDispatch } from '../context/GameContext';
+import { useToast } from '../context/ToastContext';
 import { getInitials, formatCurrency } from '../utils/helpers';
 
 export default function SetupScreen() {
   const game = useGame();
   const dispatch = useGameDispatch();
+  const showToast = useToast();
   const [playerName, setPlayerName] = useState('');
 
   const chipValue = game.chipsPerBuyIn > 0 ? game.buyIn / game.chipsPerBuyIn : 0;
@@ -14,7 +16,7 @@ export default function SetupScreen() {
     const name = playerName.trim();
     if (!name) return;
     if (game.players.some((p) => p.name.toLowerCase() === name.toLowerCase())) {
-      alert('Player already exists!');
+      showToast('Player already exists!', 'error');
       return;
     }
     dispatch({ type: 'ADD_PLAYER', payload: { name } });
@@ -23,15 +25,15 @@ export default function SetupScreen() {
 
   const handleStartGame = () => {
     if (game.players.length < 2) {
-      alert('You need at least 2 players to start a game.');
+      showToast('You need at least 2 players to start.', 'error');
       return;
     }
     if (!game.buyIn || game.buyIn <= 0) {
-      alert('Please set a valid buy-in amount.');
+      showToast('Please set a valid buy-in amount.', 'error');
       return;
     }
     if (!game.chipsPerBuyIn || game.chipsPerBuyIn <= 0) {
-      alert('Please set how many chips per buy-in.');
+      showToast('Please set how many chips per buy-in.', 'error');
       return;
     }
     dispatch({ type: 'START_GAME' });

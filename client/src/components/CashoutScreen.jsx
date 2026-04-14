@@ -1,10 +1,12 @@
 import { useState } from 'react';
 import { useGame, useGameDispatch } from '../context/GameContext';
+import { useToast } from '../context/ToastContext';
 import { formatCurrency, getInitials } from '../utils/helpers';
 
 export default function CashoutScreen() {
   const game = useGame();
   const dispatch = useGameDispatch();
+  const showToast = useToast();
 
   const chipValue = game.buyIn / game.chipsPerBuyIn;
 
@@ -45,6 +47,10 @@ export default function CashoutScreen() {
     (p) => chipAmounts[p.id] !== '' && !isNaN(Number(chipAmounts[p.id]))
   );
 
+  const handleBackToGame = () => {
+    dispatch({ type: 'BACK_TO_ACTIVE' });
+  };
+
   const handleFinish = () => {
     if (Math.abs(chipDifference) > 0.5) {
       setError(
@@ -65,6 +71,12 @@ export default function CashoutScreen() {
 
   return (
     <div>
+      <div style={{ marginBottom: '12px' }}>
+        <button className="btn btn--secondary btn--small" onClick={handleBackToGame}>
+          ← Back to Game
+        </button>
+      </div>
+
       <div className="card">
         <div className="card__title">💰 Final Chip Count</div>
         <p

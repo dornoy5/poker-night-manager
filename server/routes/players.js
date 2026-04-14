@@ -1,11 +1,30 @@
 const express = require('express');
 const router = express.Router();
+const jwt = require('jsonwebtoken');
 const Game = require('../models/Game');
+const Group = require('../models/Group');
 
-// Get all players with lifetime stats
-router.get('/', async (req, res) => {
+const JWT_SECRET = process.env.JWT_SECRET || 'poker-night-secret-key';
+
+function auth(req, res, next) {
   try {
-    const games = await Game.find({ phase: 'settled' });
+    const token = req.headers.authorization?.split(' ')[1];
+    if (!token) return res.status(401).json({ error: 'No token' });
+    const decoded = jwt.verify(token, JWT_SECRET);
+    req.userId = decoded.userId;
+    next();
+  } catch (err) {
+    res.status(401).json({ error: 'Invalid token' });
+  }
+}
+
+// Get players with lifetime stats — scoped to groups the user belongs to
+router.get('/', auth, async (req, res) => {
+  try {
+    // Only aggregate stats from groups the user is a member of
+    const userGroups = await Group.find({ members: req.userId }).select('_id');
+    const groupIds = userGroups.map((g) => g._id);
+    const games = await Game.find({ phase: 'settled', groupId: { $in: groupIds } });
 
     const playerStats = {};
 

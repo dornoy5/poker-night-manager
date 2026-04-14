@@ -1,4 +1,4 @@
-import { createContext, useContext, useReducer, useEffect, useCallback } from 'react';
+import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import { generateId } from '../utils/helpers';
 import { createGame, updateGame, getGame } from '../api/gameApi';
 
@@ -13,6 +13,7 @@ const initialState = {
   players: [],
   gameStartedAt: null,
   _id: null,
+  groupId: null,
 };
 
 function gameReducer(state, action) {
@@ -99,6 +100,9 @@ function gameReducer(state, action) {
     case 'START_CASHOUT':
       return { ...state, phase: 'cashout' };
 
+    case 'BACK_TO_ACTIVE':
+      return { ...state, phase: 'active' };
+
     case 'SET_PLAYER_CASHOUT': {
       const { playerId, amount } = action.payload;
       return {
@@ -126,15 +130,16 @@ function gameReducer(state, action) {
     }
 
     case 'NEW_GAME':
-      return { ...initialState, _id: null };
+      return { ...initialState, _id: null, groupId: state.groupId };
 
     default:
       return state;
   }
 }
 
-export function GameProvider({ children }) {
-  const [state, dispatch] = useReducer(gameReducer, initialState);
+export function GameProvider({ children, groupId }) {
+  const [state, dispatch] = useReducer(gameReducer, { ...initialState, groupId: groupId || null });
+  const justCreatedRef = useRef(false);
 
   // Try to load an active game from the database on startup
   useEffect(() => {
@@ -143,6 +148,12 @@ export function GameProvider({ children }) {
       getGame(activeGameId)
         .then((game) => {
           if (game && !game.error) {
+            // Only resume if the game belongs to the current group
+            const gameGroupId = game.groupId?.toString?.() || game.groupId;
+            if (groupId && gameGroupId && gameGroupId !== groupId.toString()) {
+              localStorage.removeItem('activeGameId');
+              return;
+            }
             const loaded = {
               ...game,
               players: game.players.map((p) => ({
@@ -159,7 +170,7 @@ export function GameProvider({ children }) {
           localStorage.removeItem('activeGameId');
         });
     }
-  }, []);
+  }, [groupId]);
 
   // Save to database whenever state changes (after game is created)
   const syncToDb = useCallback(async () => {
@@ -174,12 +185,19 @@ export function GameProvider({ children }) {
           currency: state.currency,
           players: state.players,
           gameStartedAt: state.gameStartedAt,
+          groupId: state.groupId,
         });
         if (saved._id) {
+          justCreatedRef.current = true;
           dispatch({ type: 'SET_DB_ID', payload: saved._id });
           localStorage.setItem('activeGameId', saved._id);
         }
       } else {
+        // Skip the sync triggered immediately after creation (data already in DB)
+        if (justCreatedRef.current) {
+          justCreatedRef.current = false;
+          return;
+        }
         await updateGame(state._id, {
           phase: state.phase,
           buyIn: state.buyIn,

@@ -1,12 +1,18 @@
 import { useState } from 'react';
 import { useGame, useGameDispatch } from '../context/GameContext';
+import { useToast } from '../context/ToastContext';
 import { formatCurrency, getInitials } from '../utils/helpers';
 
-const REBUY_OPTIONS = [50, 100, 150, 200, 250, 300, 400, 500];
+function getRebuyOptions(buyIn) {
+  // Generate 6 options: x1, x1.5, x2, x2.5, x3, x4 of the buy-in amount
+  const multipliers = [1, 1.5, 2, 2.5, 3, 4];
+  return multipliers.map((m) => Math.round(buyIn * m));
+}
 
 export default function GameScreen() {
   const game = useGame();
   const dispatch = useGameDispatch();
+  const showToast = useToast();
 
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
@@ -29,7 +35,7 @@ export default function GameScreen() {
     if (
       game.players.some((p) => p.name.toLowerCase() === name.toLowerCase())
     ) {
-      alert('Player already in game!');
+      showToast('Player already in game!', 'error');
       return;
     }
     dispatch({ type: 'ADD_PLAYER', payload: { name } });
@@ -45,11 +51,18 @@ export default function GameScreen() {
     setRebuyModalPlayer(null);
   };
 
+  const [showEndConfirm, setShowEndConfirm] = useState(false);
+
   const handleEndGame = () => {
     if (activePlayers.length === 0) {
       dispatch({ type: 'FINISH_GAME' });
       return;
     }
+    setShowEndConfirm(true);
+  };
+
+  const confirmEndGame = () => {
+    setShowEndConfirm(false);
     dispatch({ type: 'START_CASHOUT' });
   };
 
@@ -252,7 +265,7 @@ export default function GameScreen() {
                 gap: '8px',
               }}
             >
-              {REBUY_OPTIONS.map((amount) => (
+              {getRebuyOptions(game.buyIn).map((amount) => (
                 <button
                   key={amount}
                   className="btn btn--secondary"
@@ -270,6 +283,28 @@ export default function GameScreen() {
             >
               Cancel
             </button>
+          </div>
+        </div>
+      )}
+
+      {showEndConfirm && (
+        <div className="modal-overlay" onClick={() => setShowEndConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">End Game?</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.9rem', textAlign: 'center', marginBottom: '8px' }}>
+              {activePlayers.length} player{activePlayers.length !== 1 ? 's' : ''} still active.
+            </p>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem', textAlign: 'center', marginBottom: '4px' }}>
+              You'll enter their chip counts on the next screen.
+            </p>
+            <div className="modal__actions">
+              <button className="btn btn--secondary" onClick={() => setShowEndConfirm(false)}>
+                Cancel
+              </button>
+              <button className="btn btn--primary" onClick={confirmEndGame}>
+                End Game
+              </button>
+            </div>
           </div>
         </div>
       )}
@@ -327,7 +362,7 @@ export default function GameScreen() {
                 onClick={() => {
                   const chips = Number(cashoutAmount);
                   if (isNaN(chips) || chips < 0) {
-                    alert('Please enter a valid number of chips.');
+                    showToast('Please enter a valid number of chips.', 'error');
                     return;
                   }
                   dispatch({

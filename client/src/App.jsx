@@ -1,18 +1,19 @@
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GameProvider, useGame } from './context/GameContext';
+import { ToastProvider } from './context/ToastContext';
 import LoginScreen from './components/LoginScreen';
 import GroupsScreen from './components/GroupsScreen';
+import GroupDetailScreen from './components/GroupDetailScreen';
 import SetupScreen from './components/SetupScreen';
 import GameScreen from './components/GameScreen';
 import CashoutScreen from './components/CashoutScreen';
 import SettlementScreen from './components/SettlementScreen';
 import { useState } from 'react';
 
-const GOOGLE_CLIENT_ID =
-  '183302882327-enkcpucccbpki5mvlrobd0sa3n09n93c.apps.googleusercontent.com';
+const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-function GameContent({ onBack, groupName }) {
+function GameContent({ onBackToGroup, groupName }) {
   const game = useGame();
 
   return (
@@ -21,13 +22,10 @@ function GameContent({ onBack, groupName }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <button
             className="btn btn--secondary btn--small"
-            onClick={onBack}
+            onClick={onBackToGroup}
           >
-            ← Groups
+            ← {groupName}
           </button>
-          <span style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-            {groupName}
-          </span>
         </div>
         <h1 className="header__logo">Poker Night</h1>
         <p className="header__subtitle">Game Manager</p>
@@ -42,8 +40,10 @@ function GameContent({ onBack, groupName }) {
   );
 }
 
+// view: 'groups' | 'detail' | 'game'
 function AppContent() {
   const { user, loading } = useAuth();
+  const [view, setView] = useState('groups');
   const [selectedGroup, setSelectedGroup] = useState(null);
 
   if (loading) {
@@ -55,18 +55,33 @@ function AppContent() {
     );
   }
 
-  if (!user) {
-    return <LoginScreen />;
+  if (!user) return <LoginScreen />;
+
+  if (view === 'groups') {
+    return (
+      <GroupsScreen
+        onSelectGroup={(group) => {
+          setSelectedGroup(group);
+          setView('detail');
+        }}
+      />
+    );
   }
 
-  if (!selectedGroup) {
-    return <GroupsScreen onSelectGroup={setSelectedGroup} />;
+  if (view === 'detail') {
+    return (
+      <GroupDetailScreen
+        group={selectedGroup}
+        onBack={() => { setSelectedGroup(null); setView('groups'); }}
+        onNewGame={() => setView('game')}
+      />
+    );
   }
 
   return (
-    <GameProvider>
+    <GameProvider groupId={selectedGroup._id}>
       <GameContent
-        onBack={() => setSelectedGroup(null)}
+        onBackToGroup={() => setView('detail')}
         groupName={selectedGroup.name}
       />
     </GameProvider>
@@ -77,7 +92,9 @@ export default function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <AuthProvider>
-        <AppContent />
+        <ToastProvider>
+          <AppContent />
+        </ToastProvider>
       </AuthProvider>
     </GoogleOAuthProvider>
   );

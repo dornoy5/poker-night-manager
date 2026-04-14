@@ -1,27 +1,35 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { getGroups, createGroup, joinGroup } from '../api/authApi';
 import { getInitials } from '../utils/helpers';
 
 export default function GroupsScreen({ onSelectGroup }) {
     const { user, logout } = useAuth();
+    const showToast = useToast();
     const [groups, setGroups] = useState([]);
     const [showCreate, setShowCreate] = useState(false);
     const [showJoin, setShowJoin] = useState(false);
     const [groupName, setGroupName] = useState('');
     const [joinCode, setJoinCode] = useState('');
     const [loading, setLoading] = useState(true);
+    const [loadError, setLoadError] = useState(false);
 
     useEffect(() => {
         loadGroups();
     }, []);
 
     const loadGroups = async () => {
+        setLoadError(false);
         try {
             const data = await getGroups();
-            if (Array.isArray(data)) setGroups(data);
+            if (Array.isArray(data)) {
+                setGroups(data);
+            } else {
+                setLoadError(true);
+            }
         } catch (err) {
-            console.error('Failed to load groups:', err);
+            setLoadError(true);
         } finally {
             setLoading(false);
         }
@@ -32,15 +40,12 @@ export default function GroupsScreen({ onSelectGroup }) {
         if (!groupName.trim()) return;
         try {
             const group = await createGroup(groupName.trim());
-            if (group._id) {
-                setGroups([group, ...groups]);
-                setGroupName('');
-                setShowCreate(false);
-            } else {
-                alert(group.error || 'Failed to create group');
-            }
+            setGroups([group, ...groups]);
+            setGroupName('');
+            setShowCreate(false);
+            showToast('Group created!', 'success');
         } catch (err) {
-            alert('Failed to create group');
+            showToast(err.message || 'Failed to create group', 'error');
         }
     };
 
@@ -53,11 +58,12 @@ export default function GroupsScreen({ onSelectGroup }) {
                 setGroups([group, ...groups]);
                 setJoinCode('');
                 setShowJoin(false);
+                showToast('Joined group!', 'success');
             } else {
-                alert(group.error || 'Group not found');
+                showToast(group.error || 'Group not found', 'error');
             }
         } catch (err) {
-            alert('Failed to join group');
+            showToast('Failed to join group', 'error');
         }
     };
 
@@ -110,6 +116,18 @@ export default function GroupsScreen({ onSelectGroup }) {
                     <p style={{ color: 'var(--text-muted)', textAlign: 'center', padding: '20px' }}>
                         Loading...
                     </p>
+                ) : loadError ? (
+                    <div className="empty-state">
+                        <div className="empty-state__icon">⚠️</div>
+                        <p className="empty-state__text">Failed to load groups.</p>
+                        <button
+                            className="btn btn--secondary btn--small"
+                            style={{ marginTop: '12px' }}
+                            onClick={() => { setLoading(true); loadGroups(); }}
+                        >
+                            Try again
+                        </button>
+                    </div>
                 ) : groups.length === 0 ? (
                     <div className="empty-state">
                         <div className="empty-state__icon">👥</div>

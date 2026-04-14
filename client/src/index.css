@@ -535,6 +535,48 @@ h1, h2, h3 {
   animation: slideIn 0.3s ease forwards;
 }
 
+.toast-container {
+  position: fixed;
+  bottom: 24px;
+  left: 50%;
+  transform: translateX(-50%);
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  z-index: 9999;
+  pointer-events: none;
+  width: calc(100% - 32px);
+  max-width: 448px;
+}
+
+.toast {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 12px 18px;
+  border-radius: var(--radius-md);
+  font-size: 0.9rem;
+  font-weight: 500;
+  box-shadow: var(--shadow-lg);
+  animation: slideUp 0.3s ease;
+}
+
+.toast--success {
+  background: rgba(39, 174, 96, 0.95);
+  color: #fff;
+}
+
+.toast--error {
+  background: rgba(231, 76, 60, 0.95);
+  color: #fff;
+}
+
+.toast--info {
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border: 1px solid rgba(61, 122, 82, 0.3);
+}
+
 @media (max-width: 380px) {
   .app {
     padding: 12px 10px;

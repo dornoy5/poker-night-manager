@@ -1,20 +1,23 @@
+import { useState } from 'react';
 import { GoogleLogin } from '@react-oauth/google';
 import { googleLogin } from '../api/authApi';
 import { useAuth } from '../context/AuthContext';
 
 export default function LoginScreen() {
   const { login } = useAuth();
+  const [error, setError] = useState('');
 
   const handleSuccess = async (credentialResponse) => {
+    setError('');
     try {
       const data = await googleLogin(credentialResponse.credential);
       if (data.token) {
         login(data.token, data.user);
       } else {
-        alert('Login failed. Please try again.');
+        setError('Login failed. Please try again.');
       }
     } catch (err) {
-      alert('Login failed. Please try again.');
+      setError('Login failed. Please try again.');
     }
   };
 
@@ -49,10 +52,16 @@ export default function LoginScreen() {
           Sign in to manage your poker nights, create groups, and track your stats.
         </p>
 
+        {error && (
+          <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '16px' }}>
+            {error}
+          </p>
+        )}
+
         <div style={{ display: 'flex', justifyContent: 'center' }}>
           <GoogleLogin
             onSuccess={handleSuccess}
-            onError={() => alert('Login failed')}
+            onError={() => setError('Login failed. Please try again.')}
             theme="filled_black"
             size="large"
             shape="pill"

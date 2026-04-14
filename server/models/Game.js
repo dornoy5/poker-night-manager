@@ -1,4 +1,5 @@
 const mongoose = require('mongoose');
+const { Schema } = mongoose;
 
 const playerSchema = new mongoose.Schema({
   name: { type: String, required: true },
@@ -33,6 +34,8 @@ const gameSchema = new mongoose.Schema(
         amount: Number,
       },
     ],
+    createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
+    groupId: { type: Schema.Types.ObjectId, ref: 'Group' },
   },
   { timestamps: true }
 );
