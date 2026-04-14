@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getGroupGames } from '../api/gameApi';
-import { leaveGroup } from '../api/authApi';
+import { leaveGroup, deleteGroup } from '../api/authApi';
 import { getInitials, formatCurrency } from '../utils/helpers';
 
 function formatDate(dateStr) {
@@ -24,6 +24,8 @@ export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGa
   const [loading, setLoading] = useState(true);
   const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
   const [leaving, setLeaving] = useState(false);
+  const [showDeleteConfirm, setShowDeleteConfirm] = useState(false);
+  const [deleting, setDeleting] = useState(false);
 
   useEffect(() => {
     getGroupGames(group._id)
@@ -35,6 +37,19 @@ export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGa
   }, [group._id]);
 
   const isManager = group.manager._id === user._id;
+
+  const handleDelete = async () => {
+    setDeleting(true);
+    try {
+      await deleteGroup(group._id);
+      showToast('Group deleted', 'success');
+      onLeaveGroup();
+    } catch (err) {
+      showToast(err.message || 'Failed to delete group', 'error');
+      setDeleting(false);
+      setShowDeleteConfirm(false);
+    }
+  };
 
   const handleLeave = async () => {
     setLeaving(true);
@@ -141,6 +156,17 @@ export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGa
         </button>
       )}
 
+      {/* Delete group — managers only */}
+      {isManager && (
+        <button
+          className="btn btn--secondary btn--full"
+          onClick={() => setShowDeleteConfirm(true)}
+          style={{ marginBottom: '16px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+        >
+          Delete Group
+        </button>
+      )}
+
       {/* Game history */}
       <div className="card">
         <div className="card__title">📜 Game History</div>
@@ -196,6 +222,31 @@ export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGa
           })
         )}
       </div>
+      {/* Delete confirmation modal */}
+      {showDeleteConfirm && (
+        <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">Delete Group?</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', marginBottom: '20px' }}>
+              <strong>{group.name}</strong> and all its game history will be permanently deleted. This cannot be undone.
+            </p>
+            <div className="modal__actions">
+              <button className="btn btn--secondary" onClick={() => setShowDeleteConfirm(false)} disabled={deleting}>
+                Cancel
+              </button>
+              <button
+                className="btn btn--primary"
+                onClick={handleDelete}
+                disabled={deleting}
+                style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }}
+              >
+                {deleting ? 'Deleting...' : 'Delete'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {/* Leave confirmation modal */}
       {showLeaveConfirm && (
         <div className="modal-overlay" onClick={() => setShowLeaveConfirm(false)}>

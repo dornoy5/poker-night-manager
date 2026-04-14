@@ -3,6 +3,7 @@ const router = express.Router();
 const jwt = require('jsonwebtoken');
 const Group = require('../models/Group');
 const User = require('../models/User');
+const Game = require('../models/Game');
 
 const JWT_SECRET = process.env.JWT_SECRET || 'poker-night-secret-key';
 
@@ -102,6 +103,25 @@ router.get('/:id', auth, async (req, res) => {
     if (!group) return res.status(404).json({ error: 'Group not found' });
 
     res.json(group);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Delete a group (manager only)
+router.delete('/:id', auth, async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+
+    if (group.manager.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Only the manager can delete this group' });
+    }
+
+    await Game.deleteMany({ groupId: group._id });
+    await group.deleteOne();
+
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
