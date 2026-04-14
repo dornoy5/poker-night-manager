@@ -67,3 +67,11 @@ export async function getGroup(id) {
   });
   return handleResponse(res);
 }
+
+export async function leaveGroup(id) {
+  const res = await fetch(`${API_URL}/groups/${id}/leave`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}

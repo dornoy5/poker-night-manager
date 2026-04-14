@@ -107,6 +107,28 @@ router.get('/:id', auth, async (req, res) => {
   }
 });
 
+// Leave a group (non-managers only)
+router.delete('/:id/leave', auth, async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+
+    if (group.manager.toString() === req.userId) {
+      return res.status(400).json({ error: 'Manager cannot leave. Delete the group instead.' });
+    }
+
+    const isMember = group.members.map((m) => m.toString()).includes(req.userId);
+    if (!isMember) return res.status(400).json({ error: 'Not a member' });
+
+    group.members = group.members.filter((m) => m.toString() !== req.userId);
+    await group.save();
+
+    res.json({ success: true });
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
 // Remove a member (manager only)
 router.delete('/:id/members/:memberId', auth, async (req, res) => {
   try {

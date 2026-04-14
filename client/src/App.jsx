@@ -47,6 +47,7 @@ function AppContent() {
   const [view, setView] = useState('groups');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null);
+  const [groupsKey, setGroupsKey] = useState(0);
 
   if (loading) {
     return (
@@ -62,6 +63,7 @@ function AppContent() {
   if (view === 'groups') {
     return (
       <GroupsScreen
+        key={groupsKey}
         onSelectGroup={(group) => {
           setSelectedGroup(group);
           setView('detail');
@@ -77,6 +79,7 @@ function AppContent() {
         onBack={() => { setSelectedGroup(null); setView('groups'); }}
         onNewGame={() => setView('game')}
         onSelectGame={(game) => { setSelectedGame(game); setView('history'); }}
+        onLeaveGroup={() => { setSelectedGroup(null); setGroupsKey((k) => k + 1); setView('groups'); }}
       />
     );
   }

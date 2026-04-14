@@ -1,6 +1,8 @@
 import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
+import { useToast } from '../context/ToastContext';
 import { getGroupGames } from '../api/gameApi';
+import { leaveGroup } from '../api/authApi';
 import { getInitials, formatCurrency } from '../utils/helpers';
 
 function formatDate(dateStr) {
@@ -15,10 +17,13 @@ function getWinner(players) {
     .sort((a, b) => b.profit - a.profit)[0];
 }
 
-export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGame }) {
+export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGame, onLeaveGroup }) {
   const { user } = useAuth();
+  const showToast = useToast();
   const [games, setGames] = useState([]);
   const [loading, setLoading] = useState(true);
+  const [showLeaveConfirm, setShowLeaveConfirm] = useState(false);
+  const [leaving, setLeaving] = useState(false);
 
   useEffect(() => {
     getGroupGames(group._id)
@@ -30,6 +35,19 @@ export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGa
   }, [group._id]);
 
   const isManager = group.manager._id === user._id;
+
+  const handleLeave = async () => {
+    setLeaving(true);
+    try {
+      await leaveGroup(group._id);
+      showToast('You left the group', 'success');
+      onLeaveGroup();
+    } catch (err) {
+      showToast(err.message || 'Failed to leave group', 'error');
+      setLeaving(false);
+      setShowLeaveConfirm(false);
+    }
+  };
 
   return (
     <div className="app">
@@ -112,6 +130,17 @@ export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGa
         🎲 New Game
       </button>
 
+      {/* Leave group — non-managers only */}
+      {!isManager && (
+        <button
+          className="btn btn--secondary btn--full"
+          onClick={() => setShowLeaveConfirm(true)}
+          style={{ marginBottom: '16px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+        >
+          Leave Group
+        </button>
+      )}
+
       {/* Game history */}
       <div className="card">
         <div className="card__title">📜 Game History</div>
@@ -167,6 +196,30 @@ export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGa
           })
         )}
       </div>
+      {/* Leave confirmation modal */}
+      {showLeaveConfirm && (
+        <div className="modal-overlay" onClick={() => setShowLeaveConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">Leave Group?</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', marginBottom: '20px' }}>
+              You'll be removed from <strong>{group.name}</strong>. You can rejoin later with the group code.
+            </p>
+            <div className="modal__actions">
+              <button className="btn btn--secondary" onClick={() => setShowLeaveConfirm(false)} disabled={leaving}>
+                Cancel
+              </button>
+              <button
+                className="btn btn--primary"
+                onClick={handleLeave}
+                disabled={leaving}
+                style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }}
+              >
+                {leaving ? 'Leaving...' : 'Leave'}
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
