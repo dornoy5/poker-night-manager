@@ -1,6 +1,6 @@
 import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
-import { GameProvider, useGame } from './context/GameContext';
+import { GameProvider, useGame, useGameDispatch } from './context/GameContext';
 import { ToastProvider } from './context/ToastContext';
 import LoginScreen from './components/LoginScreen';
 import GroupsScreen from './components/GroupsScreen';
@@ -16,6 +16,21 @@ const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
 function GameContent({ onBackToGroup, groupName }) {
   const game = useGame();
+  const dispatch = useGameDispatch();
+  const [showBackConfirm, setShowBackConfirm] = useState(false);
+
+  const handleBack = () => {
+    if (game.phase === 'setup' && game.players.length > 0) {
+      setShowBackConfirm(true);
+    } else {
+      onBackToGroup();
+    }
+  };
+
+  const confirmBack = () => {
+    dispatch({ type: 'NEW_GAME' });
+    onBackToGroup();
+  };
 
   return (
     <div className="app">
@@ -23,7 +38,7 @@ function GameContent({ onBackToGroup, groupName }) {
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: '8px' }}>
           <button
             className="btn btn--secondary btn--small"
-            onClick={onBackToGroup}
+            onClick={handleBack}
           >
             ← {groupName}
           </button>
@@ -37,6 +52,29 @@ function GameContent({ onBackToGroup, groupName }) {
       {game.phase === 'active' && <GameScreen />}
       {game.phase === 'cashout' && <CashoutScreen />}
       {game.phase === 'settled' && <SettlementScreen />}
+
+      {showBackConfirm && (
+        <div className="modal-overlay" onClick={() => setShowBackConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">Leave Setup?</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', marginBottom: '20px' }}>
+              You have {game.players.length} player{game.players.length !== 1 ? 's' : ''} added. Going back will discard the setup.
+            </p>
+            <div className="modal__actions">
+              <button className="btn btn--secondary" onClick={() => setShowBackConfirm(false)}>
+                Stay
+              </button>
+              <button
+                className="btn btn--primary"
+                onClick={confirmBack}
+                style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }}
+              >
+                Leave
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
