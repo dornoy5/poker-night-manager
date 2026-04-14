@@ -51,7 +51,7 @@ function GameContent({ onBackToGroup, groupName }) {
       {game.phase === 'setup' && <SetupScreen />}
       {game.phase === 'active' && <GameScreen />}
       {game.phase === 'cashout' && <CashoutScreen />}
-      {game.phase === 'settled' && <SettlementScreen />}
+      {(game.phase === 'reviewing' || game.phase === 'settled') && <SettlementScreen />}
 
       {showBackConfirm && (
         <div className="modal-overlay" onClick={() => setShowBackConfirm(false)}>

@@ -126,8 +126,18 @@ function gameReducer(state, action) {
         }
         return p;
       });
-      return { ...state, players: updatedPlayers, phase: 'settled' };
+      return { ...state, players: updatedPlayers, phase: 'reviewing' };
     }
+
+    case 'BACK_TO_CASHOUT':
+      return {
+        ...state,
+        phase: 'cashout',
+        players: state.players.map((p) => ({ ...p, isActive: true })),
+      };
+
+    case 'CONFIRM_FINISH':
+      return { ...state, phase: 'settled' };
 
     case 'NEW_GAME':
       return { ...initialState, _id: null, groupId: state.groupId };
@@ -175,6 +185,7 @@ export function GameProvider({ children, groupId }) {
   // Save to database whenever state changes (after game is created)
   const syncToDb = useCallback(async () => {
     if (state.phase === 'setup' && !state._id) return;
+    if (state.phase === 'reviewing') return;
 
     try {
       if (!state._id) {

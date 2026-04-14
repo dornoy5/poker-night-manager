@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useMemo, useState } from 'react';
 import { useGame, useGameDispatch } from '../context/GameContext';
 import {
   calculateSettlements,
@@ -9,6 +9,8 @@ import {
 export default function SettlementScreen() {
   const game = useGame();
   const dispatch = useGameDispatch();
+  const [showFinishConfirm, setShowFinishConfirm] = useState(false);
+  const isReviewing = game.phase === 'reviewing';
 
   const settlements = useMemo(() => {
     const playerData = game.players.map((p) => ({
@@ -239,13 +241,54 @@ export default function SettlementScreen() {
         </div>
       </div>
 
-      <button
-        className="btn btn--primary btn--full"
-        onClick={() => dispatch({ type: 'NEW_GAME' })}
-        style={{ padding: '16px', fontSize: '1rem', marginBottom: '40px' }}
-      >
-        🎲 New Game
-      </button>
+      {isReviewing ? (
+        <div style={{ display: 'flex', gap: '10px', marginBottom: '40px' }}>
+          <button
+            className="btn btn--secondary btn--full"
+            onClick={() => dispatch({ type: 'BACK_TO_CASHOUT' })}
+            style={{ padding: '16px', fontSize: '1rem' }}
+          >
+            ← Edit
+          </button>
+          <button
+            className="btn btn--primary btn--full"
+            onClick={() => setShowFinishConfirm(true)}
+            style={{ padding: '16px', fontSize: '1rem' }}
+          >
+            Finish Game
+          </button>
+        </div>
+      ) : (
+        <button
+          className="btn btn--primary btn--full"
+          onClick={() => dispatch({ type: 'NEW_GAME' })}
+          style={{ padding: '16px', fontSize: '1rem', marginBottom: '40px' }}
+        >
+          🎲 New Game
+        </button>
+      )}
+
+      {showFinishConfirm && (
+        <div className="modal-overlay" onClick={() => setShowFinishConfirm(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">Finish Game?</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', marginBottom: '20px' }}>
+              The results will be saved to the group's game history. You won't be able to edit after this.
+            </p>
+            <div className="modal__actions">
+              <button className="btn btn--secondary" onClick={() => setShowFinishConfirm(false)}>
+                Cancel
+              </button>
+              <button
+                className="btn btn--primary"
+                onClick={() => { dispatch({ type: 'CONFIRM_FINISH' }); setShowFinishConfirm(false); }}
+              >
+                Save & Finish
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
