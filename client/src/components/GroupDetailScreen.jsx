@@ -17,6 +17,24 @@ function getWinner(players) {
     .sort((a, b) => b.profit - a.profit)[0];
 }
 
+function computePlayerStats(games) {
+  const map = {};
+  for (const game of games) {
+    for (const p of game.players) {
+      const profit = (p.cashOut || 0) - p.totalIn;
+      if (!map[p.name]) {
+        map[p.name] = { name: p.name, gamesPlayed: 0, totalProfit: 0, wins: 0, bestGame: 0, currency: game.currency };
+      }
+      const s = map[p.name];
+      s.gamesPlayed += 1;
+      s.totalProfit += profit;
+      if (profit > 0) s.wins += 1;
+      if (profit > s.bestGame) s.bestGame = profit;
+    }
+  }
+  return Object.values(map).sort((a, b) => b.totalProfit - a.totalProfit);
+}
+
 export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGame, onLeaveGroup }) {
   const { user } = useAuth();
   const showToast = useToast();
@@ -222,6 +240,36 @@ export default function GroupDetailScreen({ group, onBack, onNewGame, onSelectGa
           })
         )}
       </div>
+
+      {/* Player Stats */}
+      {!loading && games.length > 0 && (() => {
+        const stats = computePlayerStats(games);
+        const currency = games[0].currency;
+        return (
+          <div className="card">
+            <div className="card__title">📊 Player Stats</div>
+            {stats.map((s, index) => (
+              <div key={s.name} className="player-row animate-in" style={{ animationDelay: `${index * 40}ms` }}>
+                <div style={{ width: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', flexShrink: 0 }}>
+                  {index === 0 ? '👑' : `#${index + 1}`}
+                </div>
+                <div className="player-row__avatar">{getInitials(s.name)}</div>
+                <div className="player-row__info">
+                  <div className="player-row__name">{s.name}</div>
+                  <div className="player-row__stats">
+                    {s.gamesPlayed} game{s.gamesPlayed !== 1 ? 's' : ''} · {Math.round((s.wins / s.gamesPlayed) * 100)}% win rate
+                    {s.bestGame > 0 && ` · Best: +${formatCurrency(s.bestGame, currency)}`}
+                  </div>
+                </div>
+                <span className={`chip ${s.totalProfit > 0 ? 'chip--green' : s.totalProfit < 0 ? 'chip--red' : 'chip--gold'}`}>
+                  {s.totalProfit > 0 ? '+' : ''}{formatCurrency(s.totalProfit, currency)}
+                </span>
+              </div>
+            ))}
+          </div>
+        );
+      })()}
+
       {/* Delete confirmation modal */}
       {showDeleteConfirm && (
         <div className="modal-overlay" onClick={() => setShowDeleteConfirm(false)}>
