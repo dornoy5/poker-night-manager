@@ -11,11 +11,13 @@ import SetupScreen from './components/SetupScreen';
 import GameScreen from './components/GameScreen';
 import CashoutScreen from './components/CashoutScreen';
 import SettlementScreen from './components/SettlementScreen';
-import { useState } from 'react';
+import { useState, useEffect } from 'react';
+import { getGroups } from './api/authApi';
+import { useSocket } from './context/SocketContext';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-function GameContent({ onBackToGroup, groupName }) {
+function GameContent({ onBackToGroup, group }) {
   const game = useGame();
   const dispatch = useGameDispatch();
   const [showBackConfirm, setShowBackConfirm] = useState(false);
@@ -41,7 +43,7 @@ function GameContent({ onBackToGroup, groupName }) {
             className="btn btn--secondary btn--small"
             onClick={handleBack}
           >
-            ← {groupName}
+            ← {group?.name}
           </button>
         </div>
         <h1 className="header__logo">Poker Night</h1>
@@ -49,7 +51,7 @@ function GameContent({ onBackToGroup, groupName }) {
         <div className="header__suits">♠ ♥ ♦ ♣</div>
       </header>
 
-      {game.phase === 'setup' && <SetupScreen />}
+      {game.phase === 'setup' && <SetupScreen group={group} />}
       {game.phase === 'active' && <GameScreen />}
       {game.phase === 'cashout' && <CashoutScreen />}
       {(game.phase === 'reviewing' || game.phase === 'settled') && <SettlementScreen />}
@@ -83,10 +85,33 @@ function GameContent({ onBackToGroup, groupName }) {
 // view: 'groups' | 'detail' | 'game' | 'history'
 function AppContent() {
   const { user, loading } = useAuth();
+  const socket = useSocket();
   const [view, setView] = useState('groups');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null);
   const [groupsKey, setGroupsKey] = useState(0);
+
+  // Join all group socket rooms after login
+  useEffect(() => {
+    if (!user || !socket) return;
+    getGroups().then((groups) => {
+      if (Array.isArray(groups)) {
+        groups.forEach((g) => socket.emit('join-group', g._id));
+      }
+    }).catch(() => {});
+  }, [user, socket]);
+
+  // Listen for game-started — auto-navigate selected players into the game
+  useEffect(() => {
+    if (!socket || !user) return;
+    const handleGameStarted = ({ gameId, groupId, groupName }) => {
+      localStorage.setItem('activeGameId', gameId);
+      setSelectedGroup({ _id: groupId, name: groupName });
+      setView('game');
+    };
+    socket.on('game-started', handleGameStarted);
+    return () => socket.off('game-started', handleGameStarted);
+  }, [socket, user]);
 
   if (loading) {
     return (
@@ -136,7 +161,7 @@ function AppContent() {
     <GameProvider groupId={selectedGroup._id}>
       <GameContent
         onBackToGroup={() => setView('detail')}
-        groupName={selectedGroup.name}
+        group={selectedGroup}
       />
     </GameProvider>
   );

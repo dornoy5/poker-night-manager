@@ -74,10 +74,37 @@ router.put('/:id', auth, async (req, res) => {
       runValidators: true,
     });
 
-    // Broadcast updated game to all clients in this game's room
     const io = req.app.get('io');
+    const userSocketMap = req.app.get('userSocketMap');
+
     if (io) {
+      // Broadcast updated game state to all clients in this game's room
       io.to(req.params.id).emit('game-updated', updated);
+
+      // If game just transitioned to active, notify selected players
+      if (req.body.phase === 'active' && game.phase !== 'active') {
+        const playerUserIds = (req.body.players || [])
+          .filter((p) => p.userId && p.userId.toString() !== req.userId)
+          .map((p) => p.userId.toString());
+
+        // Fetch group name for the notification payload
+        const Group = require('../models/Group');
+        const group = await Group.findById(updated.groupId).select('name');
+        const groupName = group ? group.name : '';
+
+        playerUserIds.forEach((userId) => {
+          const sockets = userSocketMap.get(userId);
+          if (sockets) {
+            sockets.forEach((socketId) => {
+              io.to(socketId).emit('game-started', {
+                gameId: updated._id.toString(),
+                groupId: updated.groupId.toString(),
+                groupName,
+              });
+            });
+          }
+        });
+      }
     }
 
     res.json(updated);

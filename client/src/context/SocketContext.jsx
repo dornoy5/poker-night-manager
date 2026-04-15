@@ -1,5 +1,6 @@
 import { createContext, useContext, useEffect, useRef } from 'react';
 import { io } from 'socket.io-client';
+import { getToken } from '../api/authApi';
 
 const SOCKET_URL = import.meta.env.PROD
   ? 'https://poker-night-api.onrender.com'
@@ -17,6 +18,27 @@ export function SocketProvider({ children }) {
       reconnectionDelay: 2000,
     });
   }
+
+  useEffect(() => {
+    const socket = socketRef.current;
+
+    const authenticate = () => {
+      const token = getToken();
+      if (token) socket.emit('authenticate', token);
+    };
+
+    // Authenticate on connect and reconnect
+    socket.on('connect', authenticate);
+    socket.on('reconnect', authenticate);
+
+    // Authenticate immediately if already connected
+    if (socket.connected) authenticate();
+
+    return () => {
+      socket.off('connect', authenticate);
+      socket.off('reconnect', authenticate);
+    };
+  }, []);
 
   useEffect(() => {
     return () => {

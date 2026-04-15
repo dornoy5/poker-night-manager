@@ -3,6 +3,7 @@ const { Schema } = mongoose;
 
 const playerSchema = new mongoose.Schema({
   name: { type: String, required: true },
+  userId: { type: Schema.Types.ObjectId, ref: 'User', default: null },
   totalIn: { type: Number, default: 0 },
   rebuys: [
     {
@@ -19,7 +20,7 @@ const gameSchema = new mongoose.Schema(
   {
     phase: {
       type: String,
-      enum: ['setup', 'active', 'cashout', 'settled'],
+      enum: ['setup', 'active', 'cashout', 'reviewing', 'settled'],
       default: 'setup',
     },
     buyIn: { type: Number, required: true },

@@ -53,6 +53,7 @@ function gameReducer(state, action) {
       const newPlayer = {
         id: generateId(),
         name: action.payload.name,
+        userId: action.payload.userId || null,
         totalIn: state.phase === 'active' ? state.buyIn : 0,
         rebuys: [],
         cashOut: null,
