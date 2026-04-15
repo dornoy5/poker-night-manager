@@ -2,6 +2,7 @@ import { GoogleOAuthProvider } from '@react-oauth/google';
 import { AuthProvider, useAuth } from './context/AuthContext';
 import { GameProvider, useGame, useGameDispatch } from './context/GameContext';
 import { ToastProvider } from './context/ToastContext';
+import { SocketProvider } from './context/SocketContext';
 import LoginScreen from './components/LoginScreen';
 import GroupsScreen from './components/GroupsScreen';
 import GroupDetailScreen from './components/GroupDetailScreen';
@@ -145,9 +146,11 @@ export default function App() {
   return (
     <GoogleOAuthProvider clientId={GOOGLE_CLIENT_ID}>
       <AuthProvider>
-        <ToastProvider>
-          <AppContent />
-        </ToastProvider>
+        <SocketProvider>
+          <ToastProvider>
+            <AppContent />
+          </ToastProvider>
+        </SocketProvider>
       </AuthProvider>
     </GoogleOAuthProvider>
   );

@@ -73,6 +73,13 @@ router.put('/:id', auth, async (req, res) => {
       new: true,
       runValidators: true,
     });
+
+    // Broadcast updated game to all clients in this game's room
+    const io = req.app.get('io');
+    if (io) {
+      io.to(req.params.id).emit('game-updated', updated);
+    }
+
     res.json(updated);
   } catch (err) {
     res.status(400).json({ error: err.message });

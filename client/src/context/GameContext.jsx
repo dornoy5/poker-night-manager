@@ -1,6 +1,7 @@
 import { createContext, useContext, useReducer, useEffect, useCallback, useRef } from 'react';
 import { generateId } from '../utils/helpers';
 import { createGame, updateGame, getGame } from '../api/gameApi';
+import { useSocket } from './SocketContext';
 
 const GameContext = createContext(null);
 const GameDispatchContext = createContext(null);
@@ -150,6 +151,8 @@ function gameReducer(state, action) {
 export function GameProvider({ children, groupId }) {
   const [state, dispatch] = useReducer(gameReducer, { ...initialState, groupId: groupId || null });
   const justCreatedRef = useRef(false);
+  const isSyncingRef = useRef(false);
+  const socket = useSocket();
 
   // Try to load an active game from the database on startup
   useEffect(() => {
@@ -182,6 +185,38 @@ export function GameProvider({ children, groupId }) {
     }
   }, [groupId]);
 
+  // Join/leave socket room when game ID is known
+  useEffect(() => {
+    if (!socket || !state._id) return;
+    socket.emit('join-game', state._id);
+    return () => {
+      socket.emit('leave-game', state._id);
+    };
+  }, [socket, state._id]);
+
+  // Listen for real-time updates from other clients
+  useEffect(() => {
+    if (!socket) return;
+
+    const handleGameUpdated = (updatedGame) => {
+      // Ignore if we're the one who triggered the update
+      if (isSyncingRef.current) return;
+      const loaded = {
+        ...updatedGame,
+        players: updatedGame.players.map((p) => ({
+          ...p,
+          id: p._id || p.id || generateId(),
+        })),
+      };
+      dispatch({ type: 'LOAD_GAME', payload: loaded });
+    };
+
+    socket.on('game-updated', handleGameUpdated);
+    return () => {
+      socket.off('game-updated', handleGameUpdated);
+    };
+  }, [socket]);
+
   // Save to database whenever state changes (after game is created)
   const syncToDb = useCallback(async () => {
     if (state.phase === 'setup' && !state._id) return;
@@ -209,6 +244,7 @@ export function GameProvider({ children, groupId }) {
           justCreatedRef.current = false;
           return;
         }
+        isSyncingRef.current = true;
         await updateGame(state._id, {
           phase: state.phase,
           buyIn: state.buyIn,
@@ -217,6 +253,7 @@ export function GameProvider({ children, groupId }) {
           players: state.players,
           gameStartedAt: state.gameStartedAt,
         });
+        setTimeout(() => { isSyncingRef.current = false; }, 500);
 
         if (state.phase === 'settled') {
           localStorage.removeItem('activeGameId');

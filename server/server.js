@@ -1,18 +1,21 @@
 const express = require('express');
+const http = require('http');
+const { Server } = require('socket.io');
 const mongoose = require('mongoose');
 const cors = require('cors');
 require('dotenv').config();
 
 const app = express();
+const httpServer = http.createServer(app);
 
-// Middleware
+// Allowed origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
   : ['http://localhost:5173', 'http://localhost:4173'];
 
+// CORS for Express
 app.use(cors({
   origin: (origin, callback) => {
-    // Allow requests with no origin (curl, mobile apps, Postman)
     if (!origin) return callback(null, true);
     if (allowedOrigins.includes(origin)) return callback(null, true);
     callback(new Error(`CORS: origin ${origin} not allowed`));
@@ -20,6 +23,32 @@ app.use(cors({
   credentials: true,
 }));
 app.use(express.json());
+
+// Socket.io
+const io = new Server(httpServer, {
+  cors: {
+    origin: allowedOrigins,
+    methods: ['GET', 'POST'],
+    credentials: true,
+  },
+});
+
+io.on('connection', (socket) => {
+  socket.on('join-game', (gameId) => {
+    if (gameId) {
+      socket.join(gameId);
+    }
+  });
+
+  socket.on('leave-game', (gameId) => {
+    if (gameId) {
+      socket.leave(gameId);
+    }
+  });
+});
+
+// Attach io to app so routes can broadcast
+app.set('io', io);
 
 // Routes
 const authRoutes = require('./routes/auth');
@@ -44,7 +73,7 @@ mongoose
   .connect(process.env.MONGODB_URI)
   .then(() => {
     console.log('Connected to MongoDB');
-    app.listen(PORT, () => {
+    httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });
   })
