@@ -3,7 +3,7 @@ import { useGame, useGameDispatch } from '../context/GameContext';
 import { useToast } from '../context/ToastContext';
 import { getInitials, formatCurrency } from '../utils/helpers';
 
-export default function SetupScreen({ group }) {
+export default function SetupScreen({ group, runningGame }) {
   const game = useGame();
   const dispatch = useGameDispatch();
   const showToast = useToast();
@@ -14,6 +14,9 @@ export default function SetupScreen({ group }) {
   const [guestName, setGuestName] = useState('');
   // Extra guests added (by name only)
   const [guests, setGuests] = useState([]);
+  // Running game conflict warning
+  const [conflictPlayers, setConflictPlayers] = useState([]);
+  const [showConflictModal, setShowConflictModal] = useState(false);
 
   const chipValue = game.chipsPerBuyIn > 0 ? game.buyIn / game.chipsPerBuyIn : 0;
 
@@ -55,6 +58,19 @@ export default function SetupScreen({ group }) {
 
   const totalPlayers = selectedIds.size + guests.length;
 
+  const doStartGame = () => {
+    const members = group?.members || [];
+    members
+      .filter((m) => selectedIds.has(m._id))
+      .forEach((m) => {
+        dispatch({ type: 'ADD_PLAYER', payload: { name: m.name, userId: m._id } });
+      });
+    guests.forEach((name) => {
+      dispatch({ type: 'ADD_PLAYER', payload: { name } });
+    });
+    dispatch({ type: 'START_GAME' });
+  };
+
   const handleStartGame = () => {
     if (totalPlayers < 2) {
       showToast('You need at least 2 players to start.', 'error');
@@ -69,20 +85,22 @@ export default function SetupScreen({ group }) {
       return;
     }
 
-    // Add selected members
-    const members = group?.members || [];
-    members
-      .filter((m) => selectedIds.has(m._id))
-      .forEach((m) => {
-        dispatch({ type: 'ADD_PLAYER', payload: { name: m.name, userId: m._id } });
-      });
+    // Check if any selected members are already in the running game
+    if (runningGame) {
+      const runningNames = runningGame.players.map((p) => p.name.toLowerCase());
+      const members = group?.members || [];
+      const conflicts = [
+        ...members.filter((m) => selectedIds.has(m._id) && runningNames.includes(m.name.toLowerCase())).map((m) => m.name),
+        ...guests.filter((g) => runningNames.includes(g.toLowerCase())),
+      ];
+      if (conflicts.length > 0) {
+        setConflictPlayers(conflicts);
+        setShowConflictModal(true);
+        return;
+      }
+    }
 
-    // Add guests (no userId)
-    guests.forEach((name) => {
-      dispatch({ type: 'ADD_PLAYER', payload: { name } });
-    });
-
-    dispatch({ type: 'START_GAME' });
+    doStartGame();
   };
 
   const members = group?.members || [];
@@ -242,6 +260,31 @@ export default function SetupScreen({ group }) {
       >
         🎲 Start Game
       </button>
+
+      {showConflictModal && (
+        <div className="modal-overlay" onClick={() => setShowConflictModal(false)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">Players Already in a Game</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', marginBottom: '12px' }}>
+              The following players are already in a running game:
+            </p>
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', justifyContent: 'center', marginBottom: '20px' }}>
+              {conflictPlayers.map((name) => (
+                <span key={name} className="chip chip--red">{name}</span>
+              ))}
+            </div>
+            <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', textAlign: 'center', marginBottom: '20px' }}>
+              Starting this game will add them to two games simultaneously. Are you sure?
+            </p>
+            <div className="modal__actions">
+              <button className="btn btn--secondary" onClick={() => setShowConflictModal(false)}>Cancel</button>
+              <button className="btn btn--primary" onClick={() => { setShowConflictModal(false); doStartGame(); }} style={{ background: 'var(--danger)', borderColor: 'var(--danger)' }}>
+                Start Anyway
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }

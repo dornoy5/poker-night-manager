@@ -57,6 +57,15 @@ export async function deleteGame(id) {
   return handleResponse(res);
 }
 
+export async function getRunningGame(groupId) {
+  const res = await fetch(`${API_URL}/games?groupId=${groupId}`, {
+    headers: getAuthHeaders(),
+  });
+  const data = await handleResponse(res);
+  if (!Array.isArray(data)) return null;
+  return data.find((g) => ['active', 'cashout', 'reviewing'].includes(g.phase)) || null;
+}
+
 export async function getPlayerStats() {
   const res = await fetch(`${API_URL}/players`, {
     headers: getAuthHeaders(),

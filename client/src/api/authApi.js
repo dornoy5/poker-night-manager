@@ -83,3 +83,27 @@ export async function deleteGroup(id) {
   });
   return handleResponse(res);
 }
+
+export async function promoteToManager(groupId, memberId) {
+  const res = await fetch(`${API_URL}/groups/${groupId}/managers/${memberId}`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function demoteManager(groupId, memberId) {
+  const res = await fetch(`${API_URL}/groups/${groupId}/managers/${memberId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
+export async function removeMember(groupId, memberId) {
+  const res = await fetch(`${API_URL}/groups/${groupId}/members/${memberId}`, {
+    method: 'DELETE',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}

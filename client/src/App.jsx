@@ -7,6 +7,7 @@ import LoginScreen from './components/LoginScreen';
 import GroupsScreen from './components/GroupsScreen';
 import GroupDetailScreen from './components/GroupDetailScreen';
 import GameHistoryDetailScreen from './components/GameHistoryDetailScreen';
+import LiveObserverScreen from './components/LiveObserverScreen';
 import SetupScreen from './components/SetupScreen';
 import GameScreen from './components/GameScreen';
 import CashoutScreen from './components/CashoutScreen';
@@ -17,7 +18,7 @@ import { useSocket } from './context/SocketContext';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
 
-function GameContent({ onBackToGroup, group }) {
+function GameContent({ onBackToGroup, group, runningGame }) {
   const game = useGame();
   const dispatch = useGameDispatch();
   const [showBackConfirm, setShowBackConfirm] = useState(false);
@@ -51,7 +52,7 @@ function GameContent({ onBackToGroup, group }) {
         <div className="header__suits">♠ ♥ ♦ ♣</div>
       </header>
 
-      {game.phase === 'setup' && <SetupScreen group={group} />}
+      {game.phase === 'setup' && <SetupScreen group={group} runningGame={runningGame} />}
       {game.phase === 'active' && <GameScreen />}
       {game.phase === 'cashout' && <CashoutScreen />}
       {(game.phase === 'reviewing' || game.phase === 'settled') && <SettlementScreen />}
@@ -82,7 +83,7 @@ function GameContent({ onBackToGroup, group }) {
   );
 }
 
-// view: 'groups' | 'detail' | 'game' | 'history'
+// view: 'groups' | 'detail' | 'game' | 'history' | 'observer'
 function AppContent() {
   const { user, loading } = useAuth();
   const socket = useSocket();
@@ -90,6 +91,7 @@ function AppContent() {
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null);
   const [groupsKey, setGroupsKey] = useState(0);
+  const [runningGame, setRunningGame] = useState(null);
 
   // Join all group socket rooms after login
   useEffect(() => {
@@ -141,9 +143,10 @@ function AppContent() {
       <GroupDetailScreen
         group={selectedGroup}
         onBack={() => { setSelectedGroup(null); setView('groups'); }}
-        onNewGame={() => setView('game')}
+        onNewGame={(rg) => { setRunningGame(rg || null); setView('game'); }}
         onSelectGame={(game) => { setSelectedGame(game); setView('history'); }}
         onLeaveGroup={() => { setSelectedGroup(null); setGroupsKey((k) => k + 1); setView('groups'); }}
+        onWatchLive={(game) => { setSelectedGame(game); setView('observer'); }}
       />
     );
   }
@@ -157,11 +160,22 @@ function AppContent() {
     );
   }
 
+  if (view === 'observer') {
+    return (
+      <LiveObserverScreen
+        gameId={selectedGame._id}
+        groupName={selectedGroup?.name}
+        onBack={() => { setSelectedGame(null); setView('detail'); }}
+      />
+    );
+  }
+
   return (
     <GameProvider groupId={selectedGroup._id}>
       <GameContent
         onBackToGroup={() => setView('detail')}
         group={selectedGroup}
+        runningGame={runningGame}
       />
     </GameProvider>
   );
