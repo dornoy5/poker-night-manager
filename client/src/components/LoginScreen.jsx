@@ -21,44 +21,33 @@ export default function LoginScreen() {
     }
   };
 
+  const joining = !!localStorage.getItem('pendingJoin');
+
   return (
-    <div className="app">
-      <header className="header">
-        <h1 className="header__logo">Poker Night</h1>
-        <p className="header__subtitle">Game Manager</p>
-        <div className="header__suits">♠ ♥ ♦ ♣</div>
-      </header>
+    <div className="app login">
+      {/* A tossed stack of chips: the app's whole subject in one picture */}
+      <div className="login__stack" aria-hidden="true">
+        <span className="login__chip" style={{ '--chip': 'var(--chip-blue)', '--x': '-34px', '--y': '18px', '--r': '-14deg' }} />
+        <span className="login__chip" style={{ '--chip': 'var(--chip-coral)', '--x': '30px', '--y': '6px', '--r': '12deg' }} />
+        <span className="login__chip login__chip--top" style={{ '--chip': 'var(--chip-yellow)', '--x': '0px', '--y': '-14px', '--r': '0deg' }} />
+      </div>
 
-      <div className="card" style={{ textAlign: 'center', padding: '40px 24px' }}>
-        <div style={{ fontSize: '3rem', marginBottom: '16px' }}>🃏</div>
-        <h2
-          style={{
-            fontFamily: "'Playfair Display', serif",
-            fontSize: '1.3rem',
-            color: 'var(--gold)',
-            marginBottom: '12px',
-          }}
-        >
-          Welcome
-        </h2>
-        <p
-          style={{
-            color: 'var(--text-secondary)',
-            fontSize: '0.9rem',
-            marginBottom: '32px',
-            lineHeight: 1.5,
-          }}
-        >
-          Sign in to manage your poker nights, create groups, and track your stats.
+      <h1 className="login__title">Poker night,<br />sorted.</h1>
+      <p className="login__lead">
+        Buy-ins, rebuys and who pays whom at the end. One phone runs the table, everyone else follows live.
+      </p>
+
+      {joining && (
+        <p className="login__note">Sign in and you'll join the group right away.</p>
+      )}
+
+      {error && (
+        <p style={{ color: 'var(--danger)', fontSize: '0.95rem', marginBottom: '16px' }}>
+          {error}
         </p>
+      )}
 
-        {error && (
-          <p style={{ color: 'var(--danger)', fontSize: '0.85rem', marginBottom: '16px' }}>
-            {error}
-          </p>
-        )}
-
-        <div style={{ display: 'flex', justifyContent: 'center' }}>
+      <div className="login__action">
           <GoogleLogin
             onSuccess={handleSuccess}
             onError={() => setError('Login failed. Please try again.')}
@@ -67,8 +56,8 @@ export default function LoginScreen() {
             shape="pill"
             text="signin_with"
           />
-        </div>
       </div>
+      <p className="login__fine">Only people in your group can see your games.</p>
     </div>
   );
 }

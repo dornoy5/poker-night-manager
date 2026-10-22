@@ -82,6 +82,18 @@ export function getInitials(name) {
     .slice(0, 2);
 }
 
+const CHIP_COLORS = ['var(--chip-coral)', 'var(--chip-blue)', 'var(--chip-mint)', 'var(--chip-yellow)', 'var(--chip-purple)', 'var(--chip-orange)'];
+
+/**
+ * Each player's avatar is a poker chip; the color comes from their name,
+ * so a player has the same chip on every screen and every phone.
+ */
+export function chipStyle(name) {
+  let hash = 0;
+  for (const ch of name || '') hash = (hash * 31 + ch.charCodeAt(0)) >>> 0;
+  return { '--chip': CHIP_COLORS[hash % CHIP_COLORS.length] };
+}
+
 /**
  * Generate a unique ID in MongoDB ObjectId format (24 hex chars), so a player
  * keeps the same id on every phone and in the database.

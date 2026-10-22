@@ -3,7 +3,7 @@ import { useSocket, useSocketRoom, useSocketConnected } from '../context/SocketC
 import { useAuth } from '../context/AuthContext';
 import { getGame } from '../api/gameApi';
 import { getGroup } from '../api/authApi';
-import { formatCurrency, getInitials } from '../utils/helpers';
+import { formatCurrency, getInitials, chipStyle } from '../utils/helpers';
 
 const PHASE_LABELS = {
   active: '🟢 Game in progress',
@@ -114,7 +114,7 @@ export default function LiveObserverScreen({ gameId, groupName, onBack, onManage
               <div className="card__title">🟢 Active Players</div>
               {activePlayers.map((p, i) => (
                 <div key={p._id || i} className="player-row animate-in" style={{ animationDelay: `${i * 40}ms` }}>
-                  <div className="player-row__avatar">{getInitials(p.name)}</div>
+                  <div className="player-row__avatar" style={chipStyle(p.name)}>{getInitials(p.name)}</div>
                   <div className="player-row__info">
                     <div className="player-row__name">{p.name}</div>
                     <div className="player-row__stats">
@@ -134,7 +134,7 @@ export default function LiveObserverScreen({ gameId, groupName, onBack, onManage
                 const profit = (p.cashOut || 0) - p.totalIn;
                 return (
                   <div key={p._id || i} className="player-row" style={{ opacity: 0.7 }}>
-                    <div className="player-row__avatar">{getInitials(p.name)}</div>
+                    <div className="player-row__avatar" style={chipStyle(p.name)}>{getInitials(p.name)}</div>
                     <div className="player-row__info">
                       <div className="player-row__name">{p.name}</div>
                       <div className="player-row__stats">

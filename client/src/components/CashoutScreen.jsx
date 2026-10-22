@@ -1,7 +1,7 @@
 import { useState } from 'react';
 import { useGame, useGameDispatch } from '../context/GameContext';
 import { useToast } from '../context/ToastContext';
-import { formatCurrency, getInitials } from '../utils/helpers';
+import { formatCurrency, getInitials, chipStyle } from '../utils/helpers';
 
 export default function CashoutScreen() {
   const game = useGame();
@@ -98,27 +98,28 @@ export default function CashoutScreen() {
         <div
           style={{
             padding: '10px 16px',
-            background: 'rgba(212, 168, 67, 0.1)',
-            border: '1px solid rgba(212, 168, 67, 0.2)',
+            background: 'rgba(140, 120, 220, 0.12)',
+            border: '1px solid rgba(140, 120, 220, 0.25)',
             borderRadius: 'var(--radius-md)',
             textAlign: 'center',
             marginBottom: '16px',
             fontSize: '0.85rem',
           }}
         >
-          <span style={{ color: 'var(--text-secondary)' }}>Chip value: </span>
+          <span style={{ color: 'var(--text-secondary)' }}>1 chip = </span>
           <strong style={{ color: 'var(--gold)' }}>{formatCurrency(chipValue, game.currency)}</strong>
-          <span style={{ color: 'var(--text-muted)', margin: '0 8px' }}>·</span>
-          <span style={{ color: 'var(--text-secondary)' }}>Total chips: </span>
-          <strong style={{ color: 'var(--gold)' }}>{Math.round(totalChipsInPlay)}</strong>
         </div>
 
-        <div className="summary-bar" style={{ marginBottom: '20px' }}>
+        {/* Stays on screen while scrolling through players, so the count is always visible */}
+        <div
+          className="summary-bar"
+          style={{ position: 'sticky', top: 0, zIndex: 5, background: 'var(--bg-card)', padding: '8px 0', margin: '0 0 12px' }}
+        >
           <div className="summary-stat">
             <div className="summary-stat__value">
               {Math.round(totalChipsInPlay)}
             </div>
-            <div className="summary-stat__label">Total Chips</div>
+            <div className="summary-stat__label">Bought</div>
           </div>
           <div className="summary-stat">
             <div
@@ -132,7 +133,7 @@ export default function CashoutScreen() {
             >
               {Math.round(totalChipsOut)}
             </div>
-            <div className="summary-stat__label">Chips Out</div>
+            <div className="summary-stat__label">Counted</div>
           </div>
           <div className="summary-stat">
             <div
@@ -154,10 +155,9 @@ export default function CashoutScreen() {
           <>
             <p
               style={{
-                fontSize: '0.72rem',
-                color: 'var(--text-muted)',
-                textTransform: 'uppercase',
-                letterSpacing: '1.5px',
+                fontSize: '0.88rem',
+                fontWeight: 600,
+                color: 'var(--text-secondary)',
                 marginBottom: '8px',
               }}
             >
@@ -169,7 +169,7 @@ export default function CashoutScreen() {
                 className="player-row"
                 style={{ opacity: 0.5 }}
               >
-                <div className="player-row__avatar">
+                <div className="player-row__avatar" style={chipStyle(player.name)}>
                   {getInitials(player.name)}
                 </div>
                 <div className="player-row__info">
@@ -197,7 +197,7 @@ export default function CashoutScreen() {
               gap: '10px',
             }}
           >
-            <div className="player-row__avatar">
+            <div className="player-row__avatar" style={chipStyle(player.name)}>
               {getInitials(player.name)}
             </div>
             <div className="player-row__info" style={{ minWidth: '80px' }}>
@@ -212,7 +212,19 @@ export default function CashoutScreen() {
             <div style={{ display: 'flex', alignItems: 'center', gap: '6px', flex: 'none' }}>
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 className="input-group__field"
+                data-chip-input={index}
+                enterKeyHint={index < activePlayers.length - 1 ? 'next' : 'done'}
+                aria-label={`${player.name} chips`}
+                onKeyDown={(e) => {
+                  if (e.key !== 'Enter') return;
+                  e.preventDefault();
+                  const next = document.querySelector(`[data-chip-input="${index + 1}"]`);
+                  if (next) next.focus();
+                  else e.currentTarget.blur();
+                }}
                 value={chipAmounts[player.id]}
                 onChange={(e) =>
                   setChipAmounts((prev) => ({
@@ -220,7 +232,7 @@ export default function CashoutScreen() {
                     [player.id]: e.target.value,
                   }))
                 }
-                placeholder="Chips..."
+                placeholder="0"
                 min="0"
                 style={{
                   width: '100px',

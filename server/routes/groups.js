@@ -107,6 +107,9 @@ router.delete('/:id/leave', auth, async (req, res) => {
 
     const isMember = group.members.map((m) => m.toString()).includes(req.userId);
     if (!isMember) return res.status(400).json({ error: 'Not a member' });
+    if (group.manager.toString() === req.userId) {
+      return res.status(400).json({ error: 'The group creator cannot leave. Delete the group instead.' });
+    }
 
     group.members = group.members.filter((m) => m.toString() !== req.userId);
     group.managers = (group.managers || []).filter((m) => m.toString() !== req.userId);

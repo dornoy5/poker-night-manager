@@ -12,16 +12,49 @@ import SetupScreen from './components/SetupScreen';
 import GameScreen, { SaveStatusBanner } from './components/GameScreen';
 import CashoutScreen from './components/CashoutScreen';
 import SettlementScreen from './components/SettlementScreen';
-import { useState, useEffect } from 'react';
-import { getGroups } from './api/authApi';
+import { useState, useEffect, useCallback, useRef } from 'react';
+import { getGroups, getGroup, joinGroup } from './api/authApi';
+import { getGame } from './api/gameApi';
 import { useSocket } from './context/SocketContext';
+import { useToast } from './context/ToastContext';
 
 const GOOGLE_CLIENT_ID = import.meta.env.VITE_GOOGLE_CLIENT_ID;
+
+// Keep the phone screen on while a game is running (where the browser allows it)
+function useWakeLock(enabled) {
+  useEffect(() => {
+    if (!enabled || !('wakeLock' in navigator)) return;
+    let lock = null;
+    let cancelled = false;
+    const request = async () => {
+      try {
+        if (document.visibilityState === 'visible') lock = await navigator.wakeLock.request('screen');
+        if (cancelled) lock?.release();
+      } catch {
+        // Not allowed (battery saver, old browser): the game still works
+      }
+    };
+    request();
+    document.addEventListener('visibilitychange', request);
+    return () => {
+      cancelled = true;
+      document.removeEventListener('visibilitychange', request);
+      lock?.release().catch(() => {});
+    };
+  }, [enabled]);
+}
 
 function GameContent({ onBackToGroup, group, runningGame }) {
   const game = useGame();
   const dispatch = useGameDispatch();
   const [showBackConfirm, setShowBackConfirm] = useState(false);
+
+  useWakeLock(game.phase === 'active' || game.phase === 'cashout');
+
+  // Every step of the night starts at the top of the screen
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [game.phase]);
 
   const handleBack = () => {
     if (game.phase === 'setup' && game.players.length > 0) {
@@ -85,14 +118,95 @@ function GameContent({ onBackToGroup, group, runningGame }) {
 }
 
 // view: 'groups' | 'detail' | 'game' | 'history' | 'observer'
+// Where the phone's Back button (and the in-app back buttons) lead from each screen
+const PARENT_VIEW = { groups: 'groups', detail: 'groups', game: 'detail', history: 'detail', observer: 'detail' };
+
+// An invite link looks like /?join=ABC123. Remember the code through the Google sign-in.
+function capturePendingJoin() {
+  const code = new URLSearchParams(window.location.search).get('join');
+  if (code) {
+    localStorage.setItem('pendingJoin', code.trim().toUpperCase());
+    window.history.replaceState(window.history.state, '', window.location.pathname);
+  }
+}
+capturePendingJoin();
+
 function AppContent() {
   const { user, loading } = useAuth();
   const socket = useSocket();
+  const showToast = useToast();
   const [view, setView] = useState('groups');
   const [selectedGroup, setSelectedGroup] = useState(null);
   const [selectedGame, setSelectedGame] = useState(null);
   const [groupsKey, setGroupsKey] = useState(0);
   const [runningGame, setRunningGame] = useState(null);
+
+  // Moving forward adds a history step, so the phone's Back button walks back through the app
+  const navigate = useCallback((next) => {
+    setView(next);
+    window.history.pushState({ pokerView: next }, '');
+  }, []);
+
+  const goBack = useCallback(() => {
+    if (window.history.state?.pokerView) window.history.back();
+    else setView((v) => PARENT_VIEW[v]);
+  }, []);
+
+  useEffect(() => {
+    // After a reload the app starts on the groups list, so forget the screens of the last visit
+    window.history.replaceState(null, '');
+    const onPop = () => setView((v) => PARENT_VIEW[v]);
+    window.addEventListener('popstate', onPop);
+    return () => window.removeEventListener('popstate', onPop);
+  }, []);
+
+  useEffect(() => {
+    window.scrollTo(0, 0);
+  }, [view]);
+
+  // Reopening the app mid-game goes straight back into the game this phone was running
+  const resumedRef = useRef(false);
+  useEffect(() => {
+    if (!user || resumedRef.current) return;
+    resumedRef.current = true;
+    const gameId = localStorage.getItem('activeGameId');
+    if (!gameId || localStorage.getItem('pendingJoin')) return;
+    getGame(gameId)
+      .then(async (game) => {
+        if (!['active', 'cashout', 'reviewing'].includes(game.phase) || !game.groupId) return;
+        const group = await getGroup(game.groupId);
+        if (!group?._id) return;
+        setSelectedGroup(group);
+        setRunningGame(null);
+        navigate('game');
+      })
+      .catch(() => {});
+  }, [user, navigate]);
+
+  // Finish an invite link once the user is signed in
+  useEffect(() => {
+    if (!user) return;
+    const code = localStorage.getItem('pendingJoin');
+    if (!code) return;
+    localStorage.removeItem('pendingJoin');
+    joinGroup(code)
+      .then(async (result) => {
+        let group = result?._id ? result : null;
+        if (!group && result?.error === 'Already a member') {
+          const groups = await getGroups();
+          group = groups.find((g) => g.code === code) || null;
+        }
+        if (!group) {
+          showToast(result?.error === 'Group not found' ? `No group with code ${code}. Check the link.` : 'Could not join the group. Try the code by hand.', 'error');
+          return;
+        }
+        if (result?._id) showToast(`You joined ${group.name}`, 'success');
+        setGroupsKey((k) => k + 1);
+        setSelectedGroup(group);
+        navigate('detail');
+      })
+      .catch(() => showToast('Could not join the group. Try the code by hand.', 'error'));
+  }, [user, navigate, showToast]);
 
   // Join all group socket rooms after login
   useEffect(() => {
@@ -111,17 +225,17 @@ function AppContent() {
     const handleGameStarted = ({ gameId, groupId, groupName }) => {
       setSelectedGroup({ _id: groupId, name: groupName });
       setSelectedGame({ _id: gameId });
-      setView('observer');
+      navigate('observer');
     };
     socket.on('game-started', handleGameStarted);
     return () => socket.off('game-started', handleGameStarted);
-  }, [socket, user]);
+  }, [socket, user, navigate]);
 
   // Open a running game for editing on this phone (its creator or a group manager)
   const manageGame = (game) => {
     localStorage.setItem('activeGameId', game._id);
     setRunningGame(null);
-    setView('game');
+    navigate('game');
   };
 
   if (loading) {
@@ -141,7 +255,7 @@ function AppContent() {
         key={groupsKey}
         onSelectGroup={(group) => {
           setSelectedGroup(group);
-          setView('detail');
+          navigate('detail');
         }}
       />
     );
@@ -151,12 +265,12 @@ function AppContent() {
     return (
       <GroupDetailScreen
         group={selectedGroup}
-        onBack={() => { setSelectedGroup(null); setView('groups'); }}
-        onNewGame={(rg) => { localStorage.removeItem('activeGameId'); setRunningGame(rg || null); setView('game'); }}
+        onBack={goBack}
+        onNewGame={(rg) => { localStorage.removeItem('activeGameId'); setRunningGame(rg || null); navigate('game'); }}
         onManageGame={manageGame}
-        onSelectGame={(game) => { setSelectedGame(game); setView('history'); }}
+        onSelectGame={(game) => { setSelectedGame(game); navigate('history'); }}
         onLeaveGroup={() => { setSelectedGroup(null); setGroupsKey((k) => k + 1); setView('groups'); }}
-        onWatchLive={(game) => { setSelectedGame(game); setView('observer'); }}
+        onWatchLive={(game) => { setSelectedGame(game); navigate('observer'); }}
       />
     );
   }
@@ -165,7 +279,7 @@ function AppContent() {
     return (
       <GameHistoryDetailScreen
         game={selectedGame}
-        onBack={() => { setSelectedGame(null); setView('detail'); }}
+        onBack={goBack}
       />
     );
   }
@@ -176,7 +290,7 @@ function AppContent() {
         gameId={selectedGame._id}
         groupName={selectedGroup?.name}
         onManage={manageGame}
-        onBack={() => { setSelectedGame(null); setView('detail'); }}
+        onBack={goBack}
       />
     );
   }
@@ -184,7 +298,7 @@ function AppContent() {
   return (
     <GameProvider groupId={selectedGroup._id}>
       <GameContent
-        onBackToGroup={() => setView('detail')}
+        onBackToGroup={goBack}
         group={selectedGroup}
         runningGame={runningGame}
       />

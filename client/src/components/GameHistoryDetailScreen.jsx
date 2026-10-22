@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { calculateSettlements, formatCurrency, getInitials } from '../utils/helpers';
+import { calculateSettlements, formatCurrency, getInitials, chipStyle } from '../utils/helpers';
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -52,7 +52,7 @@ export default function GameHistoryDetailScreen({ game, onBack }) {
       {/* Game summary */}
       <div style={{ textAlign: 'center', marginBottom: '24px' }}>
         <div style={{ fontSize: '3rem', marginBottom: '8px' }}>🏆</div>
-        <h2 style={{ fontFamily: "'Playfair Display', serif", fontSize: '1.5rem', color: 'var(--gold)' }}>
+        <h2 style={{ fontFamily: "var(--font-display)", fontSize: '1.5rem', color: 'var(--gold)' }}>
           {formatDate(game.createdAt)}
         </h2>
         <p style={{ color: 'var(--text-muted)', fontSize: '0.85rem' }}>
@@ -80,13 +80,13 @@ export default function GameHistoryDetailScreen({ game, onBack }) {
                 style={{
                   padding: '16px',
                   background: 'var(--bg-darkest)',
-                  border: '1px solid rgba(61, 122, 82, 0.15)',
+                  border: '1px solid rgba(140, 120, 220, 0.15)',
                   borderRadius: 'var(--radius-md)',
                   marginBottom: '10px',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <div className="player-row__avatar">{getInitials(player.name)}</div>
+                  <div className="player-row__avatar" style={chipStyle(player.name)}>{getInitials(player.name)}</div>
                   <strong style={{ fontSize: '1rem' }}>{player.name}</strong>
                   {player.profit > 0 ? (
                     <span className="chip chip--green" style={{ marginLeft: 'auto' }}>
@@ -126,7 +126,7 @@ export default function GameHistoryDetailScreen({ game, onBack }) {
             <div style={{ width: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', flexShrink: 0 }}>
               {index === 0 ? '👑' : index === playerResults.length - 1 ? '💀' : `#${index + 1}`}
             </div>
-            <div className="player-row__avatar">{getInitials(player.name)}</div>
+            <div className="player-row__avatar" style={chipStyle(player.name)}>{getInitials(player.name)}</div>
             <div className="player-row__info">
               <div className="player-row__name">{player.name}</div>
               <div className="player-row__stats">

@@ -4,6 +4,7 @@ import {
   calculateSettlements,
   formatCurrency,
   getInitials,
+  chipStyle,
 } from '../utils/helpers';
 
 function buildShareText(game, settlements) {
@@ -77,7 +78,7 @@ export default function SettlementScreen() {
         <div style={{ fontSize: '3rem', marginBottom: '8px' }}>🏆</div>
         <h2
           style={{
-            fontFamily: "'Playfair Display', serif",
+            fontFamily: "var(--font-display)",
             fontSize: '1.5rem',
             color: 'var(--gold)',
           }}
@@ -111,13 +112,13 @@ export default function SettlementScreen() {
                 style={{
                   padding: '16px',
                   background: 'var(--bg-darkest)',
-                  border: '1px solid rgba(61, 122, 82, 0.15)',
+                  border: '1px solid rgba(140, 120, 220, 0.15)',
                   borderRadius: 'var(--radius-md)',
                   marginBottom: '10px',
                 }}
               >
                 <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '10px' }}>
-                  <div className="player-row__avatar">
+                  <div className="player-row__avatar" style={chipStyle(player.name)}>
                     {getInitials(player.name)}
                   </div>
                   <strong style={{ fontSize: '1rem' }}>{player.name}</strong>
@@ -194,7 +195,7 @@ export default function SettlementScreen() {
                   ? '💀'
                   : `#${index + 1}`}
             </div>
-            <div className="player-row__avatar">
+            <div className="player-row__avatar" style={chipStyle(player.name)}>
               {getInitials(player.name)}
             </div>
             <div className="player-row__info">

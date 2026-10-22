@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getGroups, createGroup, joinGroup } from '../api/authApi';
-import { getInitials } from '../utils/helpers';
+import { getInitials, chipStyle } from '../utils/helpers';
 
 export default function GroupsScreen({ onSelectGroup }) {
     const { user, logout } = useAuth();
@@ -96,7 +96,7 @@ export default function GroupsScreen({ onSelectGroup }) {
                         }}
                     />
                 ) : (
-                    <div className="player-row__avatar">{getInitials(user.name)}</div>
+                    <div className="player-row__avatar" style={chipStyle(user.name)}>{getInitials(user.name)}</div>
                 )}
                 <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{user.name}</div>
@@ -148,16 +148,7 @@ export default function GroupsScreen({ onSelectGroup }) {
                         >
                             <div
                                 className="player-row__avatar"
-                                style={{
-                                    background:
-                                        group.manager._id === user._id
-                                            ? 'linear-gradient(135deg, var(--gold-dim), var(--gold))'
-                                            : undefined,
-                                    color:
-                                        group.manager._id === user._id
-                                            ? 'var(--bg-darkest)'
-                                            : undefined,
-                                }}
+                                style={chipStyle(group.name)}
                             >
                                 {getInitials(group.name)}
                             </div>
@@ -182,7 +173,7 @@ export default function GroupsScreen({ onSelectGroup }) {
                                     }}
                                     onClick={(e) => {
                                         e.stopPropagation();
-                                        const message = `Join my poker group "${group.name}" on Poker Night Manager!\n\nGroup code: ${group.code}\n\nhttps://poker-night-manager-ten.vercel.app`;
+                                        const message = `Join my poker group "${group.name}" on Poker Night!\n\nTap to join: ${window.location.origin}/?join=${group.code}\n\nOr enter the code: ${group.code}`;
                                         window.open(
                                             `https://wa.me/?text=${encodeURIComponent(message)}`,
                                             '_blank'

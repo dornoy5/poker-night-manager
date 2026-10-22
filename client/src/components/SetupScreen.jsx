@@ -1,15 +1,21 @@
 import { useState } from 'react';
 import { useGame, useGameDispatch } from '../context/GameContext';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { getInitials, formatCurrency } from '../utils/helpers';
 
 export default function SetupScreen({ group, runningGame }) {
   const game = useGame();
   const dispatch = useGameDispatch();
   const showToast = useToast();
+  const { user } = useAuth();
 
   // Track selected member IDs
-  const [selectedIds, setSelectedIds] = useState(new Set());
+  // You're almost always playing at your own game, so start with you picked
+  const [selectedIds, setSelectedIds] = useState(() => {
+    const me = (group?.members || []).find((m) => m._id === user?._id);
+    return new Set(me ? [me._id] : []);
+  });
   // Guest name input
   const [guestName, setGuestName] = useState('');
   // Extra guests added (by name only)
@@ -125,24 +131,26 @@ export default function SetupScreen({ group, runningGame }) {
           <label className="input-group__label">Buy-in Amount</label>
           <input
             type="number"
+            inputMode="numeric"
+            pattern="[0-9]*"
             className="input-group__field"
             value={game.buyIn}
             onChange={(e) => dispatch({ type: 'SET_BUYIN', payload: Number(e.target.value) })}
             onBlur={(e) => {
-              const rounded = Math.round(Number(e.target.value) / 50) * 50;
-              dispatch({ type: 'SET_BUYIN', payload: Math.max(50, rounded) });
+              dispatch({ type: 'SET_BUYIN', payload: Math.max(1, Math.round(Number(e.target.value) || 0)) });
             }}
-            min="50"
-            step="50"
+            min="1"
             placeholder="e.g. 100"
           />
-          <p className="input-group__hint">Must be a multiple of 50</p>
+          <p className="input-group__hint">What each player pays to sit down</p>
         </div>
 
         <div className="input-group">
           <label className="input-group__label">Chips per Buy-in</label>
           <input
             type="number"
+            inputMode="numeric"
+            pattern="[0-9]*"
             className="input-group__field"
             value={game.chipsPerBuyIn}
             onChange={(e) => dispatch({ type: 'SET_CHIPS_PER_BUYIN', payload: Number(e.target.value) })}
@@ -153,7 +161,7 @@ export default function SetupScreen({ group, runningGame }) {
         </div>
 
         {chipValue > 0 && (
-          <div style={{ padding: '12px 16px', background: 'rgba(212,168,67,0.1)', border: '1px solid rgba(212,168,67,0.2)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
+          <div style={{ padding: '12px 16px', background: 'rgba(140, 120, 220, 0.12)', border: '1px solid rgba(140, 120, 220, 0.25)', borderRadius: 'var(--radius-md)', textAlign: 'center' }}>
             <span style={{ color: 'var(--text-secondary)', fontSize: '0.85rem' }}>Chip value: </span>
             <strong style={{ color: 'var(--gold)', fontSize: '1rem' }}>{formatCurrency(chipValue, game.currency)} per chip</strong>
           </div>
@@ -180,8 +188,8 @@ export default function SetupScreen({ group, runningGame }) {
                   gap: '8px',
                   padding: '8px 14px',
                   borderRadius: '24px',
-                  border: selected ? '2px solid var(--gold)' : '2px solid rgba(61,122,82,0.25)',
-                  background: selected ? 'rgba(212,168,67,0.12)' : 'var(--bg-darkest)',
+                  border: selected ? '2px solid var(--gold)' : '2px solid rgba(140, 120, 220,0.25)',
+                  background: selected ? 'rgba(255, 209, 102,0.12)' : 'var(--bg-darkest)',
                   color: selected ? 'var(--gold)' : 'var(--text-secondary)',
                   cursor: 'pointer',
                   fontSize: '0.88rem',
@@ -204,7 +212,7 @@ export default function SetupScreen({ group, runningGame }) {
         </div>
 
         {/* Guest input */}
-        <div style={{ borderTop: '1px solid rgba(61,122,82,0.15)', paddingTop: '14px' }}>
+        <div style={{ borderTop: '1px solid rgba(140, 120, 220,0.15)', paddingTop: '14px' }}>
           <p style={{ color: 'var(--text-muted)', fontSize: '0.8rem', marginBottom: '10px' }}>
             + Add a guest (not in the group)
           </p>
@@ -227,7 +235,7 @@ export default function SetupScreen({ group, runningGame }) {
               {guests.map((name) => (
                 <div
                   key={name}
-                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--bg-dark)', border: '1px solid rgba(61,122,82,0.2)', borderRadius: '20px', fontSize: '0.85rem' }}
+                  style={{ display: 'flex', alignItems: 'center', gap: '6px', padding: '6px 12px', background: 'var(--bg-dark)', border: '1px solid rgba(140, 120, 220,0.2)', borderRadius: '20px', fontSize: '0.85rem' }}
                 >
                   <span style={{ color: 'var(--text-muted)', fontSize: '0.7rem' }}>Guest</span>
                   {name}

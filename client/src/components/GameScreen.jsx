@@ -2,13 +2,13 @@ import { useState, useEffect } from 'react';
 import { useGame, useGameDispatch, useSaveStatus } from '../context/GameContext';
 import { useToast } from '../context/ToastContext';
 import { getGroup } from '../api/authApi';
-import { formatCurrency, getInitials } from '../utils/helpers';
+import { formatCurrency, getInitials, chipStyle } from '../utils/helpers';
 
 export function SaveStatusBanner() {
   const status = useSaveStatus();
   if (status !== 'offline') return null;
   return (
-    <div style={{ background: 'rgba(192,57,43,0.15)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+    <div style={{ background: 'rgba(255, 93, 115,0.15)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
       ⚠ No connection. Keep going: your changes are kept on this phone and saved when you're back online.
     </div>
   );
@@ -95,7 +95,15 @@ export default function GameScreen({ group }) {
     showToast(`Removed ${formatCurrency(last.amount, game.currency)} rebuy from ${rebuyModalPlayer.name}`);
   };
 
+  // Removing a player can't be undone, so it takes two taps
+  const [confirmRemoveId, setConfirmRemoveId] = useState(null);
+  const confirmRemove = confirmRemoveId !== null && confirmRemoveId === rebuyPlayerId;
+
   const handleRemovePlayer = () => {
+    if (!confirmRemove) {
+      setConfirmRemoveId(rebuyPlayerId);
+      return;
+    }
     dispatch({ type: 'REMOVE_PLAYER', payload: rebuyModalPlayer.id });
     showToast(`${rebuyModalPlayer.name} removed`);
     setRebuyPlayerId(null);
@@ -151,7 +159,7 @@ export default function GameScreen({ group }) {
               className="player-row animate-in"
               style={{ animationDelay: `${index * 50}ms` }}
             >
-              <div className="player-row__avatar">
+              <div className="player-row__avatar" style={chipStyle(player.name)}>
                 {getInitials(player.name)}
               </div>
               <div className="player-row__info">
@@ -196,7 +204,7 @@ export default function GameScreen({ group }) {
           <div className="card__title">🔴 Cashed Out</div>
           {cashedOutPlayers.map((player) => (
             <div key={player.id} className="player-row" style={{ opacity: 0.6 }}>
-              <div className="player-row__avatar">
+              <div className="player-row__avatar" style={chipStyle(player.name)}>
                 {getInitials(player.name)}
               </div>
               <div className="player-row__info">
@@ -232,7 +240,18 @@ export default function GameScreen({ group }) {
         </div>
       )}
 
-      <div style={{ display: 'flex', gap: '10px', marginBottom: '16px' }}>
+      {/* Pinned to the bottom so it's one tap away however many players there are */}
+      <div
+        style={{
+          display: 'flex',
+          gap: '10px',
+          position: 'sticky',
+          bottom: 0,
+          zIndex: 10,
+          padding: '12px 0 calc(12px + env(safe-area-inset-bottom))',
+          background: 'linear-gradient(to top, var(--night) 70%, rgba(21, 17, 42, 0))',
+        }}
+      >
         <button
           className="btn btn--secondary btn--full"
           onClick={() => setShowAddPlayer(true)}
@@ -375,11 +394,13 @@ export default function GameScreen({ group }) {
             )}
             {rebuyModalPlayer.rebuys.length === 0 && (
               <button
-                className="btn btn--secondary btn--full"
+                className={confirmRemove ? 'btn btn--danger btn--full' : 'btn btn--small btn--full'}
                 onClick={handleRemovePlayer}
-                style={{ marginTop: '10px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+                style={confirmRemove ? { marginTop: '10px' } : { marginTop: '10px', background: 'transparent', color: 'var(--text-muted)' }}
               >
-                Remove {rebuyModalPlayer.name} (added by mistake)
+                {confirmRemove
+                  ? `Tap again to remove ${rebuyModalPlayer.name}`
+                  : `Added by mistake? Remove ${rebuyModalPlayer.name}`}
               </button>
             )}
             <div className="divider" />
@@ -467,6 +488,8 @@ export default function GameScreen({ group }) {
               <label className="input-group__label">Number of Chips</label>
               <input
                 type="number"
+                inputMode="numeric"
+                pattern="[0-9]*"
                 className="input-group__field"
                 value={cashoutAmount}
                 onChange={(e) => setCashoutAmount(e.target.value)}

@@ -3,7 +3,7 @@ import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getGroupGames } from '../api/gameApi';
 import { getGroup, leaveGroup, deleteGroup, promoteToManager, demoteManager, removeMember } from '../api/authApi';
-import { getInitials, formatCurrency } from '../utils/helpers';
+import { getInitials, formatCurrency, chipStyle } from '../utils/helpers';
 
 function formatDate(dateStr) {
   const d = new Date(dateStr);
@@ -159,7 +159,7 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
 
       {/* Running game banner */}
       {runningGame && (
-        <div style={{ background: 'rgba(61,122,82,0.15)', border: '1px solid var(--felt-accent)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
+        <div style={{ background: 'rgba(140, 120, 220,0.15)', border: '1px solid var(--felt-accent)', borderRadius: 'var(--radius-md)', padding: '12px 16px', marginBottom: '12px', display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '10px' }}>
           <div>
             <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--success)' }}>🟢 Game in progress</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{runningGame.players.length} players · {formatCurrency(runningGame.players.reduce((s, p) => s + p.totalIn, 0), runningGame.currency)} pot</div>
@@ -188,7 +188,7 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
         </div>
 
         <div style={{ display: 'flex', alignItems: 'center', gap: '14px' }}>
-          <div className="player-row__avatar" style={{ width: '48px', height: '48px', fontSize: '1rem', background: isManager ? 'linear-gradient(135deg, var(--gold-dim), var(--gold))' : undefined, color: isManager ? 'var(--bg-darkest)' : undefined }}>
+          <div className="player-row__avatar" style={{ ...chipStyle(group.name), width: '52px', height: '52px', fontSize: '1rem' }}>
             {getInitials(group.name)}
           </div>
           <div style={{ flex: 1 }}>
@@ -204,7 +204,7 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
         {!showManagerPanel && (
           <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '14px' }}>
             {group.members.map((m) => (
-              <div key={m._id} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-darkest)', border: '1px solid rgba(61,122,82,0.2)', borderRadius: '20px', padding: '4px 10px', fontSize: '0.8rem' }}>
+              <div key={m._id} style={{ display: 'flex', alignItems: 'center', gap: '6px', background: 'var(--bg-darkest)', border: '1px solid rgba(140, 120, 220,0.2)', borderRadius: '20px', padding: '4px 10px', fontSize: '0.8rem' }}>
                 {m.picture ? (
                   <img src={m.picture} alt={m.name} style={{ width: '18px', height: '18px', borderRadius: '50%' }} />
                 ) : (
@@ -222,7 +222,7 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
         {/* Manager panel */}
         {showManagerPanel && (
           <div style={{ marginTop: '14px' }}>
-            <p style={{ fontSize: '0.75rem', color: 'var(--text-muted)', textTransform: 'uppercase', letterSpacing: '1px', marginBottom: '10px' }}>Members</p>
+            <p style={{ fontSize: '0.88rem', fontWeight: 600, color: 'var(--text-secondary)', marginBottom: '10px' }}>Members</p>
             {group.members.map((m) => {
               const memberIsManager = isMemberManager(m._id);
               const isSelf = m._id === user._id;
@@ -230,7 +230,7 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
               const canChange = !isSelf && m._id !== (group.manager?._id || group.manager)?.toString();
               return (
                 <div key={m._id} className="player-row" style={{ marginBottom: '6px' }}>
-                  <div className="player-row__avatar" style={{ background: memberIsManager ? 'linear-gradient(135deg, var(--gold-dim), var(--gold))' : undefined, color: memberIsManager ? 'var(--bg-darkest)' : undefined }}>
+                  <div className="player-row__avatar" style={chipStyle(m.name)}>
                     {getInitials(m.name)}
                   </div>
                   <div className="player-row__info">
@@ -268,18 +268,6 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
         🎲 New Game
       </button>
 
-      {/* Leave group */}
-      <button className="btn btn--secondary btn--full" onClick={() => setShowLeaveConfirm(true)} style={{ marginBottom: '16px', color: 'var(--danger)', borderColor: 'var(--danger)' }}>
-        Leave Group
-      </button>
-
-      {/* Delete group — its creator only (it removes all game history) */}
-      {isCreator && (
-        <button className="btn btn--secondary btn--full" onClick={() => setShowDeleteConfirm(true)} style={{ marginBottom: '16px', color: 'var(--danger)', borderColor: 'var(--danger)' }}>
-          Delete Group
-        </button>
-      )}
-
       {/* Game history */}
       <div className="card">
         <div className="card__title">📜 Game History</div>
@@ -296,7 +284,7 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
             const totalPot = game.players.reduce((s, p) => s + p.totalIn, 0);
             return (
               <div key={game._id} className="player-row animate-in" style={{ animationDelay: `${index * 40}ms`, cursor: 'pointer' }} onClick={() => onSelectGame(game)}>
-                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--bg-dark)', border: '1px solid rgba(61,122,82,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🃏</div>
+                <div style={{ width: '38px', height: '38px', borderRadius: '50%', background: 'var(--bg-dark)', border: '1px solid rgba(140, 120, 220,0.2)', display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: '1.1rem', flexShrink: 0 }}>🃏</div>
                 <div className="player-row__info">
                   <div className="player-row__name">{formatDate(game.createdAt)}</div>
                   <div className="player-row__stats">
@@ -325,7 +313,7 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
                 <div style={{ width: '24px', textAlign: 'center', fontSize: '0.85rem', color: 'var(--text-muted)', flexShrink: 0 }}>
                   {index === 0 ? '👑' : `#${index + 1}`}
                 </div>
-                <div className="player-row__avatar">{getInitials(s.name)}</div>
+                <div className="player-row__avatar" style={chipStyle(s.name)}>{getInitials(s.name)}</div>
                 <div className="player-row__info">
                   <div className="player-row__name">{s.name}</div>
                   <div className="player-row__stats">
@@ -334,13 +322,27 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
                   </div>
                 </div>
                 <span className={`chip ${s.totalProfit > 0 ? 'chip--green' : s.totalProfit < 0 ? 'chip--red' : 'chip--gold'}`}>
-                  {s.totalProfit > 0 ? '+' : ''}{formatCurrency(s.totalProfit, currency)}
+                  {s.totalProfit > 0 ? '+' : s.totalProfit < 0 ? '-' : ''}{formatCurrency(s.totalProfit, currency)}
                 </span>
               </div>
             ))}
           </div>
         );
       })()}
+
+      {/* Rare and destructive, so they sit quietly at the bottom.
+          The creator deletes the group instead of leaving it. */}
+      <div style={{ display: 'flex', justifyContent: 'center', gap: '8px', margin: '8px 0 24px' }}>
+        {isCreator ? (
+          <button className="btn btn--small" onClick={() => setShowDeleteConfirm(true)} style={{ background: 'transparent', color: 'var(--danger)' }}>
+            Delete group
+          </button>
+        ) : (
+          <button className="btn btn--small" onClick={() => setShowLeaveConfirm(true)} style={{ background: 'transparent', color: 'var(--danger)' }}>
+            Leave group
+          </button>
+        )}
+      </div>
 
       {/* Running game conflict modal */}
       {showRunningGameModal && (
