@@ -28,6 +28,33 @@ export async function googleLogin(credential) {
   return res.json();
 }
 
+// Phone sign-in: both return { token, user } on success or { error } on failure
+export async function phoneRegister(name, phone, pin) {
+  const res = await fetch(`${API_URL}/auth/phone/register`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ name, phone, pin }),
+  });
+  return res.json();
+}
+
+export async function phoneLogin(phone, pin) {
+  const res = await fetch(`${API_URL}/auth/phone/login`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({ phone, pin }),
+  });
+  return res.json();
+}
+
+export async function resetMemberPin(groupId, memberId) {
+  const res = await fetch(`${API_URL}/groups/${groupId}/members/${memberId}/reset-pin`, {
+    method: 'POST',
+    headers: getAuthHeaders(),
+  });
+  return handleResponse(res);
+}
+
 export async function getMe() {
   const res = await fetch(`${API_URL}/auth/me`, {
     headers: getAuthHeaders(),

@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Group = require('../models/Group');
 const Game = require('../models/Game');
+const User = require('../models/User');
 const { auth, isMemberOf, isManagerOf } = require('../middleware/auth');
 
 function generateCode() {
@@ -13,7 +14,8 @@ function generateCode() {
   return code;
 }
 
-const POPULATE_FIELDS = 'name email picture';
+// Phone numbers are never sent to other members
+const POPULATE_FIELDS = 'name email picture authType';
 
 // Create a group
 router.post('/', auth, async (req, res) => {
@@ -136,6 +138,33 @@ router.delete('/:id/members/:memberId', auth, async (req, res) => {
     await group.save();
     await group.populate('manager managers members', POPULATE_FIELDS);
     res.json(group);
+  } catch (err) {
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// Reset a phone member's forgotten PIN (any manager). For the next 24 hours, the next
+// sign-in with that number sets a new PIN.
+router.post('/:id/members/:memberId/reset-pin', auth, async (req, res) => {
+  try {
+    const group = await Group.findById(req.params.id);
+    if (!group) return res.status(404).json({ error: 'Group not found' });
+    if (!isManagerOf(group, req.userId)) {
+      return res.status(403).json({ error: 'Only managers can reset a PIN' });
+    }
+    if (!isMemberOf(group, req.params.memberId)) {
+      return res.status(400).json({ error: 'User is not a member' });
+    }
+    const member = await User.findById(req.params.memberId);
+    if (!member || member.authType !== 'phone') {
+      return res.status(400).json({ error: 'Only phone accounts have a PIN' });
+    }
+    member.pinHash = null;
+    member.pinFailures = 0;
+    member.pinLockedUntil = null;
+    member.pinResetUntil = new Date(Date.now() + 24 * 60 * 60 * 1000);
+    await member.save();
+    res.json({ success: true });
   } catch (err) {
     res.status(500).json({ error: err.message });
   }

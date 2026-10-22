@@ -12,6 +12,9 @@ const Game = require('./models/Game');
 const app = express();
 const httpServer = http.createServer(app);
 
+// Behind Render's proxy: use the visitor's real IP (the sign-in rate limit counts per IP)
+app.set('trust proxy', 1);
+
 // Allowed origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS
   ? process.env.ALLOWED_ORIGINS.split(',')
@@ -131,8 +134,17 @@ const PORT = process.env.PORT || 5000;
 
 mongoose
   .connect(process.env.MONGODB_URI)
-  .then(() => {
+  .then(async () => {
     console.log('Connected to MongoDB');
+    // Phone accounts have no Google id or email: the old unique indexes on those
+    // must become sparse, or the second phone user would clash. Safe to run every start.
+    try {
+      const User = require('./models/User');
+      const dropped = await User.syncIndexes();
+      if (dropped.length) console.log('User indexes updated, replaced:', dropped.join(', '));
+    } catch (err) {
+      console.error('Could not update User indexes:', err.message);
+    }
     httpServer.listen(PORT, () => {
       console.log(`Server running on port ${PORT}`);
     });

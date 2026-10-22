@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getGroupGames } from '../api/gameApi';
-import { getGroup, leaveGroup, deleteGroup, promoteToManager, demoteManager, removeMember } from '../api/authApi';
+import { getGroup, leaveGroup, deleteGroup, promoteToManager, demoteManager, removeMember, resetMemberPin } from '../api/authApi';
 import { getInitials, formatCurrency, chipStyle } from '../utils/helpers';
 
 function formatDate(dateStr) {
@@ -130,6 +130,15 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
     }
   };
 
+  const handleResetPin = async (member) => {
+    try {
+      await resetMemberPin(group._id, member._id);
+      showToast(`PIN reset. Tell ${member.name.split(' ')[0]} to sign in within 24 hours and type a new PIN.`, 'success');
+    } catch (err) {
+      showToast(err.message || 'Could not reset the PIN', 'error');
+    }
+  };
+
   const handleRemoveMember = async (memberId) => {
     try {
       const updated = await removeMember(group._id, memberId);
@@ -239,6 +248,15 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
                       {isSelf && <span style={{ color: 'var(--text-muted)', fontSize: '0.75rem' }}> (you)</span>}
                     </div>
                     <div className="player-row__stats">{memberIsManager ? '★ Manager' : 'Member'}</div>
+                    {!isSelf && m.authType === 'phone' && (
+                      <button
+                        type="button"
+                        onClick={() => handleResetPin(m)}
+                        style={{ background: 'none', border: 'none', padding: '6px 0', color: 'var(--gold)', fontFamily: 'inherit', fontSize: '0.82rem', fontWeight: 600, cursor: 'pointer' }}
+                      >
+                        Reset PIN
+                      </button>
+                    )}
                   </div>
                   {canChange && (
                     <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>

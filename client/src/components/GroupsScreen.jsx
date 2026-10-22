@@ -100,8 +100,8 @@ export default function GroupsScreen({ onSelectGroup }) {
                 )}
                 <div style={{ flex: 1 }}>
                     <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{user.name}</div>
-                    <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>
-                        {user.email}
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                        {user.phoneNumber || user.email}
                     </div>
                 </div>
                 <button className="btn btn--secondary btn--small" onClick={logout}>
