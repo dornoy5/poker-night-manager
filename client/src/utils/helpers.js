@@ -2,10 +2,11 @@
  * Calculate the minimum number of transactions to settle all debts.
  */
 export function calculateSettlements(players) {
-  // Step 1: Calculate how much each player won or lost
+  // Step 1: Calculate how much each player won or lost, in whole cents so
+  // rounding never leaves a 0.01 transfer behind
   const balances = [];
   for (let i = 0; i < players.length; i++) {
-    const net = players[i].cashOut - players[i].totalIn;
+    const net = Math.round((players[i].cashOut - players[i].totalIn) * 100);
     balances.push({ name: players[i].name, net: net });
   }
 
@@ -37,7 +38,7 @@ export function calculateSettlements(players) {
       transactions.push({
         from: debtors[i].name,
         to: creditors[j].name,
-        amount: Math.round(amount * 100) / 100,
+        amount: amount / 100,
       });
     }
 
@@ -82,10 +83,21 @@ export function getInitials(name) {
 }
 
 /**
- * Generate a unique ID.
+ * Generate a unique ID in MongoDB ObjectId format (24 hex chars), so a player
+ * keeps the same id on every phone and in the database.
  */
 export function generateId() {
-  return Date.now().toString(36) + Math.random().toString(36).slice(2, 7);
+  const time = Math.floor(Date.now() / 1000).toString(16).padStart(8, '0');
+  let rest = '';
+  for (let i = 0; i < 16; i++) rest += Math.floor(Math.random() * 16).toString(16);
+  return time + rest;
+}
+
+/**
+ * Round a money amount to cents.
+ */
+export function roundMoney(value) {
+  return Math.round(value * 100) / 100;
 }
 
 /**

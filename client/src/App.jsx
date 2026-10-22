@@ -9,7 +9,7 @@ import GroupDetailScreen from './components/GroupDetailScreen';
 import GameHistoryDetailScreen from './components/GameHistoryDetailScreen';
 import LiveObserverScreen from './components/LiveObserverScreen';
 import SetupScreen from './components/SetupScreen';
-import GameScreen from './components/GameScreen';
+import GameScreen, { SaveStatusBanner } from './components/GameScreen';
 import CashoutScreen from './components/CashoutScreen';
 import SettlementScreen from './components/SettlementScreen';
 import { useState, useEffect } from 'react';
@@ -52,8 +52,9 @@ function GameContent({ onBackToGroup, group, runningGame }) {
         <div className="header__suits">♠ ♥ ♦ ♣</div>
       </header>
 
+      <SaveStatusBanner />
       {game.phase === 'setup' && <SetupScreen group={group} runningGame={runningGame} />}
-      {game.phase === 'active' && <GameScreen />}
+      {game.phase === 'active' && <GameScreen group={group} />}
       {game.phase === 'cashout' && <CashoutScreen />}
       {(game.phase === 'reviewing' || game.phase === 'settled') && <SettlementScreen />}
 
@@ -106,14 +107,22 @@ function AppContent() {
   // Listen for game-started — auto-navigate selected players into the game
   useEffect(() => {
     if (!socket || !user) return;
+    // Players follow the game live; a manager can take over from the live screen
     const handleGameStarted = ({ gameId, groupId, groupName }) => {
-      localStorage.setItem('activeGameId', gameId);
       setSelectedGroup({ _id: groupId, name: groupName });
-      setView('game');
+      setSelectedGame({ _id: gameId });
+      setView('observer');
     };
     socket.on('game-started', handleGameStarted);
     return () => socket.off('game-started', handleGameStarted);
   }, [socket, user]);
+
+  // Open a running game for editing on this phone (its creator or a group manager)
+  const manageGame = (game) => {
+    localStorage.setItem('activeGameId', game._id);
+    setRunningGame(null);
+    setView('game');
+  };
 
   if (loading) {
     return (
@@ -143,7 +152,8 @@ function AppContent() {
       <GroupDetailScreen
         group={selectedGroup}
         onBack={() => { setSelectedGroup(null); setView('groups'); }}
-        onNewGame={(rg) => { setRunningGame(rg || null); setView('game'); }}
+        onNewGame={(rg) => { localStorage.removeItem('activeGameId'); setRunningGame(rg || null); setView('game'); }}
+        onManageGame={manageGame}
         onSelectGame={(game) => { setSelectedGame(game); setView('history'); }}
         onLeaveGroup={() => { setSelectedGroup(null); setGroupsKey((k) => k + 1); setView('groups'); }}
         onWatchLive={(game) => { setSelectedGame(game); setView('observer'); }}
@@ -165,6 +175,7 @@ function AppContent() {
       <LiveObserverScreen
         gameId={selectedGame._id}
         groupName={selectedGroup?.name}
+        onManage={manageGame}
         onBack={() => { setSelectedGame(null); setView('detail'); }}
       />
     );

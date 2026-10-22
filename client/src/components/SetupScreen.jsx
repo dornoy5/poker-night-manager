@@ -60,15 +60,11 @@ export default function SetupScreen({ group, runningGame }) {
 
   const doStartGame = () => {
     const members = group?.members || [];
-    members
-      .filter((m) => selectedIds.has(m._id))
-      .forEach((m) => {
-        dispatch({ type: 'ADD_PLAYER', payload: { name: m.name, userId: m._id } });
-      });
-    guests.forEach((name) => {
-      dispatch({ type: 'ADD_PLAYER', payload: { name } });
-    });
-    dispatch({ type: 'START_GAME' });
+    const players = [
+      ...members.filter((m) => selectedIds.has(m._id)).map((m) => ({ name: m.name, userId: m._id })),
+      ...guests.map((name) => ({ name })),
+    ];
+    dispatch({ type: 'START_GAME', payload: players });
   };
 
   const handleStartGame = () => {

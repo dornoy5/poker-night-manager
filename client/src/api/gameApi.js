@@ -4,8 +4,17 @@ const API_URL = import.meta.env.PROD
   ? 'https://poker-night-api.onrender.com/api'
   : 'http://localhost:5000/api';
 
+// Thrown when the server refuses a save because the game changed since we loaded it
+export class ConflictError extends Error {
+  constructor(message, game) {
+    super(message);
+    this.game = game;
+  }
+}
+
 async function handleResponse(res) {
   const data = await res.json();
+  if (res.status === 409) throw new ConflictError(data.error || 'Game changed', data.game);
   if (!res.ok) throw new Error(data.error || `Request failed (${res.status})`);
   return data;
 }

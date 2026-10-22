@@ -51,23 +51,28 @@ export default function CashoutScreen() {
     dispatch({ type: 'BACK_TO_ACTIVE' });
   };
 
+  const finish = (splitDifference) => {
+    const cashouts = activePlayers.map((p) => ({
+      playerId: p.id,
+      chips: Number(chipAmounts[p.id]),
+    }));
+    dispatch({ type: 'FINISH_GAME_WITH_CASHOUTS', payload: { cashouts, splitDifference } });
+  };
+
   const handleFinish = () => {
     if (Math.abs(chipDifference) > 0.5) {
+      const missing = chipDifference < 0;
       setError(
-        `Total chips out (${Math.round(totalChipsOut)}) doesn't match total chips in play (${Math.round(totalChipsInPlay)}). Difference: ${Math.round(Math.abs(chipDifference))} chips.`
+        `Counted ${Math.round(totalChipsOut)} chips but ${Math.round(totalChipsInPlay)} were bought: ${Math.round(Math.abs(chipDifference))} chips ${missing ? 'missing' : 'too many'}. Recount, or split the difference.`
       );
       return;
     }
 
     setError('');
-
-    const cashouts = activePlayers.map((p) => ({
-      playerId: p.id,
-      chips: Number(chipAmounts[p.id]),
-    }));
-
-    dispatch({ type: 'FINISH_GAME_WITH_CASHOUTS', payload: cashouts });
+    finish(false);
   };
+
+  const differenceMoney = Math.abs(chipDifference) * chipValue;
 
   return (
     <div>
@@ -241,6 +246,15 @@ export default function CashoutScreen() {
           >
             ⚠ {error}
           </p>
+        )}
+        {error && Math.abs(chipDifference) > 0.5 && (
+          <button
+            className="btn btn--secondary btn--full"
+            onClick={() => { setError(''); finish(true); }}
+            style={{ marginTop: '12px' }}
+          >
+            Split {formatCurrency(differenceMoney, game.currency)} between the {activePlayers.length} player{activePlayers.length !== 1 ? 's' : ''} at the table
+          </button>
         )}
       </div>
 

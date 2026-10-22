@@ -5,11 +5,12 @@ const mongoose = require('mongoose');
 const cors = require('cors');
 const jwt = require('jsonwebtoken');
 require('dotenv').config();
+const { JWT_SECRET, isMemberOf } = require('./middleware/auth');
+const Group = require('./models/Group');
+const Game = require('./models/Game');
 
 const app = express();
 const httpServer = http.createServer(app);
-
-const JWT_SECRET = process.env.JWT_SECRET || 'poker-night-secret-key';
 
 // Allowed origins
 const allowedOrigins = process.env.ALLOWED_ORIGINS
@@ -39,29 +40,56 @@ const io = new Server(httpServer, {
   },
 });
 
-io.on('connection', (socket) => {
-  // Authenticate: map userId -> socketId
-  socket.on('authenticate', (token) => {
-    try {
-      const decoded = jwt.verify(token, JWT_SECRET);
-      const userId = decoded.userId;
-      socket.userId = userId;
+function registerUser(socket, token) {
+  try {
+    const decoded = jwt.verify(token, JWT_SECRET);
+    socket.userId = decoded.userId;
+    if (!userSocketMap.has(socket.userId)) userSocketMap.set(socket.userId, new Set());
+    userSocketMap.get(socket.userId).add(socket.id);
+  } catch (err) {
+    // Invalid token: the socket stays anonymous and cannot join any room
+  }
+}
 
-      if (!userSocketMap.has(userId)) userSocketMap.set(userId, new Set());
-      userSocketMap.get(userId).add(socket.id);
+// The client sends its login token in the handshake, so every (re)connect is authenticated
+io.use((socket, next) => {
+  const token = socket.handshake.auth?.token;
+  if (token) registerUser(socket, token);
+  next();
+});
+
+io.on('connection', (socket) => {
+  // Older clients authenticate with an event instead of the handshake
+  socket.on('authenticate', (token) => {
+    if (!socket.userId) registerUser(socket, token);
+  });
+
+  // Join a group room (members only)
+  socket.on('join-group', async (groupId) => {
+    try {
+      if (!groupId || !socket.userId) return;
+      const group = await Group.findById(groupId);
+      if (group && isMemberOf(group, socket.userId)) socket.join(`group:${groupId}`);
     } catch (err) {
-      // Invalid token — ignore
+      // Bad id: ignore
     }
   });
 
-  // Join a group room
-  socket.on('join-group', (groupId) => {
-    if (groupId) socket.join(`group:${groupId}`);
-  });
-
-  // Join a game room
-  socket.on('join-game', (gameId) => {
-    if (gameId) socket.join(gameId);
+  // Join a game room (its creator or members of its group only)
+  socket.on('join-game', async (gameId) => {
+    try {
+      if (!gameId || !socket.userId) return;
+      const game = await Game.findById(gameId);
+      if (!game) return;
+      let allowed = game.createdBy && game.createdBy.toString() === socket.userId;
+      if (!allowed && game.groupId) {
+        const group = await Group.findById(game.groupId);
+        allowed = !!group && isMemberOf(group, socket.userId);
+      }
+      if (allowed) socket.join(gameId);
+    } catch (err) {
+      // Bad id: ignore
+    }
   });
 
   socket.on('leave-game', (gameId) => {

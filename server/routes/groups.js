@@ -1,22 +1,8 @@
 const express = require('express');
 const router = express.Router();
-const jwt = require('jsonwebtoken');
 const Group = require('../models/Group');
 const Game = require('../models/Game');
-
-const JWT_SECRET = process.env.JWT_SECRET || 'poker-night-secret-key';
-
-function auth(req, res, next) {
-  try {
-    const token = req.headers.authorization?.split(' ')[1];
-    if (!token) return res.status(401).json({ error: 'No token' });
-    const decoded = jwt.verify(token, JWT_SECRET);
-    req.userId = decoded.userId;
-    next();
-  } catch (err) {
-    res.status(401).json({ error: 'Invalid token' });
-  }
-}
+const { auth, isMemberOf, isManagerOf } = require('../middleware/auth');
 
 function generateCode() {
   const chars = 'ABCDEFGHJKLMNPQRSTUVWXYZ23456789';
@@ -27,18 +13,13 @@ function generateCode() {
   return code;
 }
 
-function isManagerOf(group, userId) {
-  const inManagers = (group.managers || []).some((m) => m.toString() === userId);
-  const isOriginal = group.manager.toString() === userId;
-  return inManagers || isOriginal;
-}
-
 const POPULATE_FIELDS = 'name email picture';
 
 // Create a group
 router.post('/', auth, async (req, res) => {
   try {
-    const { name } = req.body;
+    const name = typeof req.body.name === 'string' ? req.body.name.trim() : '';
+    if (!name || name.length > 60) return res.status(400).json({ error: 'Group name must be 1-60 characters' });
     let code = generateCode();
     while (await Group.findOne({ code })) code = generateCode();
 
@@ -74,9 +55,10 @@ router.get('/', auth, async (req, res) => {
 router.post('/join', auth, async (req, res) => {
   try {
     const { code } = req.body;
-    const group = await Group.findOne({ code: code.toUpperCase() });
+    if (typeof code !== 'string') return res.status(400).json({ error: 'Code is required' });
+    const group = await Group.findOne({ code: code.trim().toUpperCase() });
     if (!group) return res.status(404).json({ error: 'Group not found' });
-    if (group.members.includes(req.userId)) {
+    if (isMemberOf(group, req.userId)) {
       return res.status(400).json({ error: 'Already a member' });
     }
     group.members.push(req.userId);
@@ -94,19 +76,20 @@ router.get('/:id', auth, async (req, res) => {
     const group = await Group.findById(req.params.id)
       .populate('manager managers members', POPULATE_FIELDS);
     if (!group) return res.status(404).json({ error: 'Group not found' });
+    if (!isMemberOf(group, req.userId)) return res.status(403).json({ error: 'Not a member of this group' });
     res.json(group);
   } catch (err) {
     res.status(500).json({ error: err.message });
   }
 });
 
-// Delete a group (any manager)
+// Delete a group and all its games (the group's creator only)
 router.delete('/:id', auth, async (req, res) => {
   try {
     const group = await Group.findById(req.params.id);
     if (!group) return res.status(404).json({ error: 'Group not found' });
-    if (!isManagerOf(group, req.userId)) {
-      return res.status(403).json({ error: 'Only managers can delete this group' });
+    if (group.manager.toString() !== req.userId) {
+      return res.status(403).json({ error: 'Only the group creator can delete this group' });
     }
     await Game.deleteMany({ groupId: group._id });
     await group.deleteOne();
@@ -141,6 +124,9 @@ router.delete('/:id/members/:memberId', auth, async (req, res) => {
     if (!group) return res.status(404).json({ error: 'Group not found' });
     if (!isManagerOf(group, req.userId)) {
       return res.status(403).json({ error: 'Only managers can remove members' });
+    }
+    if (group.manager.toString() === req.params.memberId) {
+      return res.status(400).json({ error: 'The group creator cannot be removed' });
     }
     group.members = group.members.filter((m) => m.toString() !== req.params.memberId);
     group.managers = (group.managers || []).filter((m) => m.toString() !== req.params.memberId);
@@ -183,6 +169,9 @@ router.delete('/:id/managers/:memberId', auth, async (req, res) => {
     if (!group) return res.status(404).json({ error: 'Group not found' });
     if (!isManagerOf(group, req.userId)) {
       return res.status(403).json({ error: 'Only managers can demote others' });
+    }
+    if (group.manager.toString() === req.params.memberId) {
+      return res.status(400).json({ error: 'The group creator is always a manager' });
     }
     group.managers = (group.managers || []).filter((m) => m.toString() !== req.params.memberId);
     await group.save();

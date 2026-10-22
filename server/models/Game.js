@@ -14,6 +14,10 @@ const playerSchema = new mongoose.Schema({
   cashOut: { type: Number, default: null },
   cashOutChips: { type: Number, default: null },
   isActive: { type: Boolean, default: true },
+  // Cashed out before the end of the night
+  leftEarly: { type: Boolean, default: false },
+  // Share of missing (or extra) chip money added to cashOut when the count didn't match
+  adjustment: { type: Number, default: 0 },
 });
 
 const gameSchema = new mongoose.Schema(
@@ -37,6 +41,8 @@ const gameSchema = new mongoose.Schema(
     ],
     createdBy: { type: Schema.Types.ObjectId, ref: 'User' },
     groupId: { type: Schema.Types.ObjectId, ref: 'Group' },
+    // Bumped on every save; lets the server refuse an update based on stale data
+    rev: { type: Number, default: 0 },
   },
   { timestamps: true }
 );

@@ -6,6 +6,22 @@ import {
   getInitials,
 } from '../utils/helpers';
 
+function buildShareText(game, settlements) {
+  const lines = ['🃏 Poker Night results', ''];
+  [...game.players]
+    .map((p) => ({ name: p.name, profit: (p.cashOut || 0) - p.totalIn }))
+    .sort((a, b) => b.profit - a.profit)
+    .forEach((p) => {
+      const sign = p.profit > 0 ? '+' : p.profit < 0 ? '-' : '';
+      lines.push(`${p.name}: ${sign}${formatCurrency(p.profit, game.currency)}`);
+    });
+  if (settlements.length > 0) {
+    lines.push('', '💸 Who pays whom');
+    settlements.forEach((s) => lines.push(`${s.from} → ${s.to}: ${formatCurrency(s.amount, game.currency)}`));
+  }
+  return lines.join('\n');
+}
+
 export default function SettlementScreen() {
   const game = useGame();
   const dispatch = useGameDispatch();
@@ -193,6 +209,12 @@ export default function SettlementScreen() {
                     {player.rebuys.length !== 1 ? 's' : ''}
                   </span>
                 )}
+                {!!player.adjustment && (
+                  <span>
+                    {' '}
+                    · {player.adjustment > 0 ? '+' : '-'}{formatCurrency(player.adjustment, game.currency)} chip split
+                  </span>
+                )}
               </div>
             </div>
             <div>
@@ -259,13 +281,24 @@ export default function SettlementScreen() {
           </button>
         </div>
       ) : (
-        <button
-          className="btn btn--primary btn--full"
-          onClick={() => dispatch({ type: 'NEW_GAME' })}
-          style={{ padding: '16px', fontSize: '1rem', marginBottom: '40px' }}
-        >
-          🎲 New Game
-        </button>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: '10px', marginBottom: '40px' }}>
+          <a
+            className="btn btn--secondary btn--full"
+            href={`https://wa.me/?text=${encodeURIComponent(buildShareText(game, settlements))}`}
+            target="_blank"
+            rel="noopener noreferrer"
+            style={{ padding: '16px', fontSize: '1rem', textAlign: 'center', textDecoration: 'none' }}
+          >
+            📲 Share results on WhatsApp
+          </a>
+          <button
+            className="btn btn--primary btn--full"
+            onClick={() => dispatch({ type: 'NEW_GAME' })}
+            style={{ padding: '16px', fontSize: '1rem' }}
+          >
+            🎲 New Game
+          </button>
+        </div>
       )}
 
       {showFinishConfirm && (

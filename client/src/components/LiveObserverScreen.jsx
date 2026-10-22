@@ -1,36 +1,56 @@
-import { useState, useEffect } from 'react';
-import { useSocket } from '../context/SocketContext';
+import { useState, useEffect, useCallback } from 'react';
+import { useSocket, useSocketRoom, useSocketConnected } from '../context/SocketContext';
+import { useAuth } from '../context/AuthContext';
 import { getGame } from '../api/gameApi';
+import { getGroup } from '../api/authApi';
 import { formatCurrency, getInitials } from '../utils/helpers';
 
 const PHASE_LABELS = {
   active: '🟢 Game in progress',
   cashout: '💰 Cashing out',
   reviewing: '📋 Reviewing results',
+  settled: '🏁 Game finished',
 };
 
-export default function LiveObserverScreen({ gameId, groupName, onBack }) {
+export default function LiveObserverScreen({ gameId, groupName, onBack, onManage }) {
   const socket = useSocket();
+  const connected = useSocketConnected();
+  const { user } = useAuth();
   const [game, setGame] = useState(null);
   const [loading, setLoading] = useState(true);
+  const [canManage, setCanManage] = useState(false);
 
-  useEffect(() => {
-    getGame(gameId)
+  const refresh = useCallback(() => {
+    return getGame(gameId)
       .then((data) => { if (data && !data.error) setGame(data); })
-      .finally(() => setLoading(false));
+      .catch(() => {});
   }, [gameId]);
 
   useEffect(() => {
-    if (!socket || !gameId) return;
-    socket.emit('join-game', gameId);
+    refresh().finally(() => setLoading(false));
+  }, [refresh]);
 
-    const handleUpdate = (updatedGame) => setGame(updatedGame);
-    socket.on('game-updated', handleUpdate);
+  // Whoever started the game, or a group manager, can take it over from here
+  useEffect(() => {
+    if (!game?.groupId || !user) return;
+    getGroup(game.groupId)
+      .then((g) => {
+        const ids = [game.createdBy, g.manager?._id || g.manager, ...(g.managers || []).map((m) => m._id || m)].map(String);
+        setCanManage(ids.includes(user._id));
+      })
+      .catch(() => {});
+  }, [game?.groupId, game?.createdBy, user]);
 
-    return () => {
-      socket.emit('leave-game', gameId);
-      socket.off('game-updated', handleUpdate);
+  // Re-join the live room after every reconnect, and fetch what we missed
+  useSocketRoom('join-game', 'leave-game', gameId, refresh);
+
+  useEffect(() => {
+    if (!socket) return;
+    const handleUpdate = (updatedGame) => {
+      if (updatedGame._id === gameId) setGame(updatedGame);
     };
+    socket.on('game-updated', handleUpdate);
+    return () => socket.off('game-updated', handleUpdate);
   }, [socket, gameId]);
 
   const activePlayers = game?.players.filter((p) => p.isActive) || [];
@@ -61,6 +81,11 @@ export default function LiveObserverScreen({ gameId, groupName, onBack }) {
             <div style={{ fontSize: '0.85rem', color: 'var(--gold)', fontWeight: 600, marginBottom: '8px' }}>
               {PHASE_LABELS[game.phase] || game.phase}
             </div>
+            {!connected && (
+              <div style={{ fontSize: '0.78rem', color: 'var(--danger)', marginBottom: '8px' }}>
+                Reconnecting… numbers may be behind
+              </div>
+            )}
             <div style={{ display: 'flex', justifyContent: 'center', gap: '32px' }}>
               <div>
                 <div style={{ fontSize: '1.3rem', fontWeight: 700 }}>{game.players.length}</div>
@@ -77,6 +102,11 @@ export default function LiveObserverScreen({ gameId, groupName, onBack }) {
                 <div style={{ fontSize: '0.75rem', color: 'var(--text-muted)' }}>Active</div>
               </div>
             </div>
+            {canManage && game.phase !== 'settled' && (
+              <button className="btn btn--primary btn--full" onClick={() => onManage(game)} style={{ marginTop: '14px' }}>
+                ✏ Manage this game
+              </button>
+            )}
           </div>
 
           {activePlayers.length > 0 && (

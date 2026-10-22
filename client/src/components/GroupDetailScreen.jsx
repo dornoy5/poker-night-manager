@@ -2,7 +2,7 @@ import { useState, useEffect } from 'react';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { getGroupGames } from '../api/gameApi';
-import { leaveGroup, deleteGroup, promoteToManager, demoteManager, removeMember } from '../api/authApi';
+import { getGroup, leaveGroup, deleteGroup, promoteToManager, demoteManager, removeMember } from '../api/authApi';
 import { getInitials, formatCurrency } from '../utils/helpers';
 
 function formatDate(dateStr) {
@@ -35,10 +35,11 @@ function computePlayerStats(games) {
   return Object.values(map).sort((a, b) => b.totalProfit - a.totalProfit);
 }
 
-export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGame, onSelectGame, onLeaveGroup, onWatchLive }) {
+export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGame, onManageGame, onSelectGame, onLeaveGroup, onWatchLive }) {
   const { user } = useAuth();
   const showToast = useToast();
-  const [group, setGroup] = useState(initialGroup);
+  // The group passed in may be partial (e.g. { _id, name } from a notification); start with no members
+  const [group, setGroup] = useState({ members: [], managers: [], ...initialGroup });
   const [settledGames, setSettledGames] = useState([]);
   const [runningGame, setRunningGame] = useState(null);
   const [loading, setLoading] = useState(true);
@@ -50,6 +51,10 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
   const [deleting, setDeleting] = useState(false);
   const [showRunningGameModal, setShowRunningGameModal] = useState(false);
   const [showManagerPanel, setShowManagerPanel] = useState(false);
+
+  useEffect(() => {
+    getGroup(group._id).then((g) => { if (g?._id) setGroup(g); }).catch(() => {});
+  }, [group._id]);
 
   useEffect(() => {
     getGroupGames(group._id)
@@ -67,6 +72,9 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
   const isManager = (group.managers || []).some((m) => (m._id || m).toString() === user._id)
     || group.manager?._id?.toString() === user._id
     || group.manager?.toString() === user._id;
+  const isCreator = (group.manager?._id || group.manager)?.toString() === user._id;
+  // Who can run the live game: whoever started it, or any group manager
+  const canManageRunning = !!runningGame && (isManager || runningGame.createdBy?.toString() === user._id);
 
   const handleNewGameClick = () => {
     if (runningGame) {
@@ -156,9 +164,15 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
             <div style={{ fontWeight: 700, fontSize: '0.9rem', color: 'var(--success)' }}>🟢 Game in progress</div>
             <div style={{ fontSize: '0.78rem', color: 'var(--text-muted)' }}>{runningGame.players.length} players · {formatCurrency(runningGame.players.reduce((s, p) => s + p.totalIn, 0), runningGame.currency)} pot</div>
           </div>
-          <button className="btn btn--secondary btn--small" onClick={() => onWatchLive(runningGame)}>
-            Watch Live
-          </button>
+          {canManageRunning ? (
+            <button className="btn btn--primary btn--small" onClick={() => onManageGame(runningGame)}>
+              Manage game
+            </button>
+          ) : (
+            <button className="btn btn--secondary btn--small" onClick={() => onWatchLive(runningGame)}>
+              Watch Live
+            </button>
+          )}
         </div>
       )}
 
@@ -212,6 +226,8 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
             {group.members.map((m) => {
               const memberIsManager = isMemberManager(m._id);
               const isSelf = m._id === user._id;
+              // The creator can't be demoted or removed, so don't offer it
+              const canChange = !isSelf && m._id !== (group.manager?._id || group.manager)?.toString();
               return (
                 <div key={m._id} className="player-row" style={{ marginBottom: '6px' }}>
                   <div className="player-row__avatar" style={{ background: memberIsManager ? 'linear-gradient(135deg, var(--gold-dim), var(--gold))' : undefined, color: memberIsManager ? 'var(--bg-darkest)' : undefined }}>
@@ -224,7 +240,7 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
                     </div>
                     <div className="player-row__stats">{memberIsManager ? '★ Manager' : 'Member'}</div>
                   </div>
-                  {!isSelf && (
+                  {canChange && (
                     <div style={{ display: 'flex', gap: '6px', flexShrink: 0 }}>
                       {memberIsManager ? (
                         <button className="btn btn--secondary btn--small" onClick={() => handleDemote(m._id)} style={{ fontSize: '0.72rem' }}>
@@ -257,8 +273,8 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
         Leave Group
       </button>
 
-      {/* Delete group — managers only */}
-      {isManager && (
+      {/* Delete group — its creator only (it removes all game history) */}
+      {isCreator && (
         <button className="btn btn--secondary btn--full" onClick={() => setShowDeleteConfirm(true)} style={{ marginBottom: '16px', color: 'var(--danger)', borderColor: 'var(--danger)' }}>
           Delete Group
         </button>
@@ -335,9 +351,15 @@ export default function GroupDetailScreen({ group: initialGroup, onBack, onNewGa
               There's already a game in progress in <strong>{group.name}</strong> with {runningGame.players.length} players. What would you like to do?
             </p>
             <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
-              <button className="btn btn--primary" onClick={() => { setShowRunningGameModal(false); onWatchLive(runningGame); }}>
-                👁 Watch Live
-              </button>
+              {canManageRunning ? (
+                <button className="btn btn--primary" onClick={() => { setShowRunningGameModal(false); onManageGame(runningGame); }}>
+                  ▶ Continue this game
+                </button>
+              ) : (
+                <button className="btn btn--primary" onClick={() => { setShowRunningGameModal(false); onWatchLive(runningGame); }}>
+                  👁 Watch Live
+                </button>
+              )}
               <button className="btn btn--secondary" onClick={() => { setShowRunningGameModal(false); onNewGame(runningGame); }} style={{ color: 'var(--danger)', borderColor: 'var(--danger)' }}>
                 + Create New Game Anyway
               </button>

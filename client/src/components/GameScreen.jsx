@@ -1,7 +1,18 @@
-import { useState } from 'react';
-import { useGame, useGameDispatch } from '../context/GameContext';
+import { useState, useEffect } from 'react';
+import { useGame, useGameDispatch, useSaveStatus } from '../context/GameContext';
 import { useToast } from '../context/ToastContext';
+import { getGroup } from '../api/authApi';
 import { formatCurrency, getInitials } from '../utils/helpers';
+
+export function SaveStatusBanner() {
+  const status = useSaveStatus();
+  if (status !== 'offline') return null;
+  return (
+    <div style={{ background: 'rgba(192,57,43,0.15)', border: '1px solid var(--danger)', borderRadius: 'var(--radius-md)', padding: '10px 14px', marginBottom: '12px', fontSize: '0.85rem', color: 'var(--text-secondary)', textAlign: 'center' }}>
+      ⚠ No connection. Keep going: your changes are kept on this phone and saved when you're back online.
+    </div>
+  );
+}
 
 function getRebuyOptions(buyIn) {
   // Generate 6 options: x1, x1.5, x2, x2.5, x3, x4 of the buy-in amount
@@ -9,16 +20,37 @@ function getRebuyOptions(buyIn) {
   return multipliers.map((m) => Math.round(buyIn * m));
 }
 
-export default function GameScreen() {
+export default function GameScreen({ group }) {
   const game = useGame();
   const dispatch = useGameDispatch();
   const showToast = useToast();
 
   const [showAddPlayer, setShowAddPlayer] = useState(false);
   const [newPlayerName, setNewPlayerName] = useState('');
-  const [rebuyModalPlayer, setRebuyModalPlayer] = useState(null);
+  const [rebuyPlayerId, setRebuyPlayerId] = useState(null);
+  const [customRebuy, setCustomRebuy] = useState('');
   const [cashoutModalPlayer, setCashoutModalPlayer] = useState(null);
   const [cashoutAmount, setCashoutAmount] = useState('');
+  const [backInPlayer, setBackInPlayer] = useState(null);
+  const [members, setMembers] = useState(group?.members || []);
+
+  // Always read the live player, so the modal shows the new total right after an undo
+  const rebuyModalPlayer = game.players.find((p) => p.id === rebuyPlayerId) || null;
+
+  // The group passed in may be just { _id, name } (e.g. opened from a notification)
+  useEffect(() => {
+    if (group?.members || !game.groupId) return;
+    getGroup(game.groupId).then((g) => setMembers(g.members || [])).catch(() => {});
+  }, [group?.members, game.groupId]);
+
+  const membersNotPlaying = members.filter(
+    (m) => !game.players.some((p) => (p.userId && p.userId.toString() === m._id) || p.name.toLowerCase() === m.name.toLowerCase())
+  );
+
+  const addMember = (member) => {
+    dispatch({ type: 'ADD_PLAYER', payload: { name: member.name, userId: member._id } });
+    setShowAddPlayer(false);
+  };
 
   const activePlayers = game.players.filter((p) => p.isActive);
   const cashedOutPlayers = game.players.filter((p) => !p.isActive);
@@ -44,11 +76,29 @@ export default function GameScreen() {
   };
 
   const handleRebuy = (amount) => {
+    if (!(amount > 0)) {
+      showToast('Enter an amount above 0.', 'error');
+      return;
+    }
     dispatch({
       type: 'ADD_REBUY',
       payload: { playerId: rebuyModalPlayer.id, amount },
     });
-    setRebuyModalPlayer(null);
+    showToast(`${rebuyModalPlayer.name}: +${formatCurrency(amount, game.currency)}`);
+    setRebuyPlayerId(null);
+    setCustomRebuy('');
+  };
+
+  const handleUndoRebuy = () => {
+    const last = rebuyModalPlayer.rebuys[rebuyModalPlayer.rebuys.length - 1];
+    dispatch({ type: 'UNDO_LAST_REBUY', payload: rebuyModalPlayer.id });
+    showToast(`Removed ${formatCurrency(last.amount, game.currency)} rebuy from ${rebuyModalPlayer.name}`);
+  };
+
+  const handleRemovePlayer = () => {
+    dispatch({ type: 'REMOVE_PLAYER', payload: rebuyModalPlayer.id });
+    showToast(`${rebuyModalPlayer.name} removed`);
+    setRebuyPlayerId(null);
   };
 
   const [showEndConfirm, setShowEndConfirm] = useState(false);
@@ -120,7 +170,7 @@ export default function GameScreen() {
               <div className="player-row__actions">
                 <button
                   className="btn btn--secondary btn--small"
-                  onClick={() => setRebuyModalPlayer(player)}
+                  onClick={() => setRebuyPlayerId(player.id)}
                   title="Add rebuy"
                 >
                   + Rebuy
@@ -156,7 +206,15 @@ export default function GameScreen() {
                   {formatCurrency(player.cashOut, game.currency)}
                 </div>
               </div>
-              <div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '8px' }}>
+                <button
+                  className="btn btn--secondary btn--small"
+                  onClick={() => setBackInPlayer(player)}
+                  title="Back to the table"
+                  style={{ opacity: 1 }}
+                >
+                  ↩ Back in
+                </button>
                 {player.cashOut > player.totalIn ? (
                   <span className="chip chip--green">
                     +{formatCurrency(player.cashOut - player.totalIn, game.currency)}
@@ -205,16 +263,27 @@ export default function GameScreen() {
               New player will buy in for{' '}
               {formatCurrency(game.buyIn, game.currency)}
             </p>
+            {membersNotPlaying.length > 0 && (
+              <div style={{ marginBottom: '16px' }}>
+                <label className="input-group__label">From the group</label>
+                <div style={{ display: 'flex', flexWrap: 'wrap', gap: '8px', marginTop: '8px' }}>
+                  {membersNotPlaying.map((m) => (
+                    <button key={m._id} type="button" className="btn btn--secondary btn--small" onClick={() => addMember(m)}>
+                      + {m.name}
+                    </button>
+                  ))}
+                </div>
+              </div>
+            )}
             <form onSubmit={handleAddPlayer}>
               <div className="input-group">
-                <label className="input-group__label">Player Name</label>
+                <label className="input-group__label">{membersNotPlaying.length > 0 ? 'Or a guest' : 'Player Name'}</label>
                 <input
                   type="text"
                   className="input-group__field"
                   value={newPlayerName}
                   onChange={(e) => setNewPlayerName(e.target.value)}
                   placeholder="Enter name..."
-                  autoFocus
                 />
               </div>
               <div className="modal__actions">
@@ -241,7 +310,7 @@ export default function GameScreen() {
       {rebuyModalPlayer && (
         <div
           className="modal-overlay"
-          onClick={() => setRebuyModalPlayer(null)}
+          onClick={() => { setRebuyPlayerId(null); setCustomRebuy(''); }}
         >
           <div className="modal" onClick={(e) => e.stopPropagation()}>
             <h3 className="modal__title">
@@ -276,13 +345,74 @@ export default function GameScreen() {
                 </button>
               ))}
             </div>
+            <form
+              onSubmit={(e) => { e.preventDefault(); handleRebuy(Number(customRebuy)); }}
+              style={{ display: 'flex', gap: '8px', marginTop: '10px' }}
+            >
+              <input
+                type="number"
+                inputMode="decimal"
+                className="input-group__field"
+                value={customRebuy}
+                onChange={(e) => setCustomRebuy(e.target.value)}
+                placeholder="Other amount..."
+                min="1"
+                aria-label="Other rebuy amount"
+                style={{ flex: 1, marginBottom: 0 }}
+              />
+              <button type="submit" className="btn btn--secondary" disabled={!(Number(customRebuy) > 0)}>
+                Add
+              </button>
+            </form>
+            {rebuyModalPlayer.rebuys.length > 0 && (
+              <button
+                className="btn btn--secondary btn--full"
+                onClick={handleUndoRebuy}
+                style={{ marginTop: '10px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+              >
+                ↩ Undo last rebuy ({formatCurrency(rebuyModalPlayer.rebuys[rebuyModalPlayer.rebuys.length - 1].amount, game.currency)})
+              </button>
+            )}
+            {rebuyModalPlayer.rebuys.length === 0 && (
+              <button
+                className="btn btn--secondary btn--full"
+                onClick={handleRemovePlayer}
+                style={{ marginTop: '10px', color: 'var(--danger)', borderColor: 'var(--danger)' }}
+              >
+                Remove {rebuyModalPlayer.name} (added by mistake)
+              </button>
+            )}
             <div className="divider" />
             <button
               className="btn btn--secondary btn--full"
-              onClick={() => setRebuyModalPlayer(null)}
+              onClick={() => { setRebuyPlayerId(null); setCustomRebuy(''); }}
             >
-              Cancel
+              Close
             </button>
+          </div>
+        </div>
+      )}
+
+      {backInPlayer && (
+        <div className="modal-overlay" onClick={() => setBackInPlayer(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <h3 className="modal__title">{backInPlayer.name} back in?</h3>
+            <p style={{ color: 'var(--text-secondary)', fontSize: '0.85rem', textAlign: 'center', marginBottom: '20px' }}>
+              Their cash-out of {backInPlayer.cashOutChips} chips ({formatCurrency(backInPlayer.cashOut, game.currency)}) is removed and they play on with their chips. Add a rebuy after if they buy more.
+            </p>
+            <div className="modal__actions">
+              <button className="btn btn--secondary" onClick={() => setBackInPlayer(null)}>Cancel</button>
+              <button
+                className="btn btn--primary"
+                onClick={() => {
+                  dispatch({ type: 'UNDO_CASH_OUT', payload: backInPlayer.id });
+                  showToast(`${backInPlayer.name} is back at the table`);
+                  setBackInPlayer(null);
+                }}
+              >
+                Back in
+              </button>
+            </div>
           </div>
         </div>
       )}
