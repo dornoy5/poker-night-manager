@@ -1,0 +1,337 @@
+<!doctype html>
+<html lang="he" dir="rtl">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
+<meta name="theme-color" content="#15112a">
+<link rel="icon" type="image/png" href="/favicon.png">
+<title>מדריך Poker Night</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Rubik:wght@400;500;700;800&display=swap">
+<style>
+  /* Layout: one phone-width column, right-to-left, like the app itself: night purple, chip colors.
+     Single deliberate dark look to match the app. */
+  :root {
+    --night: #15112a;
+    --velvet: #211a3b;
+    --raised: #2b2350;
+    --line: rgba(140, 120, 220, 0.24);
+    --text: #f4efff;
+    --soft: #b9b0dc;
+    --muted: #8a81b3;
+    --yellow: #ffd166;
+    --mint: #3ddc97;
+    --coral: #ff5d73;
+    --blue: #5aa9ff;
+    --purple: #b98cff;
+    --font: 'Rubik', 'Segoe UI', Arial, sans-serif;
+    color-scheme: dark;
+  }
+
+  html { background: var(--night); }
+  body {
+    background: var(--night);
+    color: var(--text);
+    font-family: var(--font);
+    font-size: 17px;
+    line-height: 1.65;
+    padding-left: max(16px, env(safe-area-inset-left, 0px));
+    padding-right: max(16px, env(safe-area-inset-right, 0px));
+    padding-block: 20px 56px;
+  }
+
+  .page { max-width: 640px; margin: 0 auto; }
+
+  a { color: var(--yellow); }
+  :focus-visible { outline: 2px solid var(--yellow); outline-offset: 2px; }
+
+  /* Opening */
+  .hero { display: flex; align-items: center; gap: 16px; margin-bottom: 8px; }
+  .chip {
+    --c: var(--yellow);
+    width: 56px; height: 56px; flex-shrink: 0; border-radius: 50%;
+    background:
+      radial-gradient(circle, var(--c) 0 54%, transparent 55%),
+      repeating-conic-gradient(var(--c) 0 22.5deg, #fbf7ff 22.5deg 45deg);
+    box-shadow: 0 8px 20px rgba(5, 2, 20, 0.5);
+  }
+  h1 { font-size: 2.1rem; line-height: 1.1; font-weight: 800; letter-spacing: -0.01em; text-wrap: balance; margin: 0; }
+  .lead { color: var(--soft); font-size: 1.05rem; margin: 10px 0 22px; }
+
+  /* Contents */
+  nav.toc { background: var(--velvet); border: 1px solid var(--line); border-radius: 18px; padding: 14px 16px; margin-bottom: 28px; }
+  nav.toc h2 { font-size: 1rem; margin: 0 0 8px; color: var(--soft); font-weight: 700; }
+  nav.toc ol { margin: 0; padding-inline-start: 22px; display: grid; gap: 4px; }
+  nav.toc a { color: var(--text); text-decoration: none; }
+  nav.toc a:hover, nav.toc a:focus-visible { color: var(--yellow); }
+
+  /* Sections */
+  section { padding-top: 8px; margin-bottom: 30px; scroll-margin-top: 12px; }
+  h2 { font-size: 1.45rem; line-height: 1.25; font-weight: 800; margin: 0 0 10px; text-wrap: balance; display: flex; align-items: center; gap: 10px; }
+  h2 .dot { width: 14px; height: 14px; border-radius: 50%; background: var(--c, var(--yellow)); flex-shrink: 0; }
+  h3 { font-size: 1.1rem; font-weight: 700; margin: 18px 0 6px; }
+  p { margin: 0 0 12px; }
+  ul, ol { margin: 0 0 12px; padding-inline-start: 22px; }
+  li { margin-bottom: 6px; }
+  strong { color: var(--text); font-weight: 700; unicode-bidi: isolate; }
+
+  /* Steps of the night: a real sequence, so they are numbered */
+  .steps { list-style: none; padding: 0; counter-reset: s; display: grid; gap: 10px; }
+  .steps > li {
+    counter-increment: s; position: relative; margin: 0;
+    background: var(--velvet); border: 1px solid var(--line); border-radius: 14px;
+    padding: 12px 52px 12px 14px;
+  }
+  .steps > li::before {
+    content: counter(s); position: absolute; right: 12px; top: 12px;
+    width: 28px; height: 28px; border-radius: 50%; display: grid; place-items: center;
+    background: var(--yellow); color: #1d1535; font-weight: 800; font-size: 0.9rem;
+  }
+
+  /* An app button name, shown exactly as it appears in the app (English, left-to-right) */
+  .b {
+    display: inline-block; direction: ltr; unicode-bidi: isolate;
+    background: var(--raised); border: 1px solid var(--line); border-radius: 8px;
+    padding: 0 7px; font-size: 0.9em; font-weight: 600; white-space: nowrap; color: var(--text);
+  }
+  .b.y { background: var(--yellow); color: #1d1535; border-color: transparent; }
+  .b.r { color: var(--coral); border-color: rgba(255, 93, 115, 0.4); }
+
+  /* Tips and warnings */
+  .note { border-radius: 14px; padding: 12px 14px; margin: 12px 0; background: rgba(61, 220, 151, 0.1); border: 1px solid rgba(61, 220, 151, 0.35); }
+  .note.warn { background: rgba(255, 93, 115, 0.1); border-color: rgba(255, 93, 115, 0.35); }
+  .note b { color: var(--mint); }
+  .note.warn b { color: var(--coral); }
+
+  .example { background: var(--velvet); border-radius: 14px; padding: 12px 14px; border: 1px dashed var(--line); font-variant-numeric: tabular-nums; }
+
+  dl { margin: 0; display: grid; gap: 10px; }
+  dt { font-weight: 700; }
+  dd { margin: 2px 0 0; color: var(--soft); }
+
+  footer { color: var(--muted); font-size: 0.9rem; border-top: 1px solid var(--line); padding-top: 14px; }
+
+  @media (prefers-reduced-motion: reduce) { html { scroll-behavior: auto; } }
+  @media (prefers-reduced-motion: no-preference) { html { scroll-behavior: smooth; } }
+
+  *, *::before, *::after { box-sizing: border-box; }
+  body { margin: 0; }
+  .back { display: inline-flex; align-items: center; min-height: 44px; padding: 0 14px; margin-bottom: 14px;
+    border-radius: 12px; background: var(--raised); border: 1px solid var(--line); color: var(--text);
+    text-decoration: none; font-weight: 700; }
+</style>
+</head>
+<body>
+<div class="page" dir="rtl" lang="he">
+  <a class="back" href="/">→ חזרה לאפליקציה</a>
+
+
+  <header class="hero">
+    <div class="chip" aria-hidden="true"></div>
+    <h1>מדריך Poker Night</h1>
+  </header>
+  <p class="lead">כל מה שהאפליקציה יודעת לעשות, לפי הסדר של ערב פוקר אמיתי. שמות הכפתורים כתובים בדיוק כמו באפליקציה, באנגלית.</p>
+
+  <nav class="toc" aria-label="תוכן">
+    <h2>תוכן</h2>
+    <ol>
+      <li><a href="#install">להתקין על המסך של הטלפון</a></li>
+      <li><a href="#signin">להיכנס עם מספר טלפון</a></li>
+      <li><a href="#groups">קבוצה: לפתוח ולהזמין חברים</a></li>
+      <li><a href="#managers">מנהלים ושותפים</a></li>
+      <li><a href="#setup">לפתוח ערב חדש</a></li>
+      <li><a href="#play">במהלך המשחק</a></li>
+      <li><a href="#others">מה החברים רואים בטלפון שלהם</a></li>
+      <li><a href="#end">סוף הערב: ספירה וחשבון</a></li>
+      <li><a href="#history">היסטוריה וסטטיסטיקות</a></li>
+      <li><a href="#signal">בלי קליטה, טלפון שנכבה, כפתור חזור</a></li>
+      <li><a href="#faq">שאלות מהשולחן</a></li>
+    </ol>
+  </nav>
+
+  <section id="install" style="--c: var(--blue)">
+    <h2><span class="dot" aria-hidden="true"></span>להתקין על המסך של הטלפון</h2>
+    <p>האפליקציה עובדת מהדפדפן, אבל הכי נוח לשים אותה על מסך הבית. ככה היא נפתחת במסך מלא עם אייקון של צ'יפ.</p>
+    <h3>אייפון</h3>
+    <ol>
+      <li>פותחים את הקישור ב-Safari.</li>
+      <li>לוחצים על כפתור השיתוף (ריבוע עם חץ למעלה).</li>
+      <li>בוחרים <span class="b">Add to Home Screen</span> ואז <span class="b">Add</span>.</li>
+    </ol>
+    <h3>אנדרואיד</h3>
+    <ol>
+      <li>פותחים את הקישור ב-Chrome.</li>
+      <li>לוחצים על שלוש הנקודות למעלה.</li>
+      <li>בוחרים <span class="b">Add to Home screen</span> או <span class="b">Install app</span>.</li>
+    </ol>
+    <div class="note"><b>טיפ:</b> אם פתחתם את הקישור מתוך וואטסאפ, הוא נפתח בדפדפן של וואטסאפ. כדי להתקין, פתחו אותו קודם ב-Safari או ב-Chrome (בתפריט: "פתח בדפדפן").</div>
+  </section>
+
+  <section id="signin" style="--c: var(--mint)">
+    <h2><span class="dot" aria-hidden="true"></span>להיכנס עם מספר טלפון</h2>
+    <p>אין צורך במייל. נכנסים עם שם, מספר טלפון וקוד של 4 ספרות (PIN).</p>
+    <h3>פעם ראשונה</h3>
+    <ol>
+      <li>בוחרים <span class="b">New here</span>.</li>
+      <li>ממלאים <span class="b">Your name</span>, <span class="b">Phone number</span>, ובוחרים PIN של 4 ספרות.</li>
+      <li>לוחצים <span class="b y">Create my account</span>. אם הגעתם מקישור הזמנה, הכפתור נקרא <span class="b y">Join the group</span> ואתם נכנסים ישר לקבוצה.</li>
+    </ol>
+    <h3>מהפעם השנייה</h3>
+    <p>הטלפון נשאר מחובר. אם התנתקתם או עברתם לטלפון חדש: <span class="b">I have an account</span>, המספר כבר ממולא, מקלידים רק את ה-PIN.</p>
+    <h3>שכחתי את ה-PIN</h3>
+    <p>מבקשים ממנהל הקבוצה ללחוץ <span class="b">Reset PIN</span> ליד השם שלכם (בחלק של <a href="#managers">מנהלים</a>). תוך 24 שעות נכנסים עם המספר ומקלידים PIN חדש. הוא נשמר מיד.</p>
+    <div class="note warn"><b>חשוב:</b> אחרי 5 קודים שגויים החשבון נעול ל-15 דקות, ואחרי 10 ברצף ליום שלם. ככה אף אחד לא יכול לנחש את הקוד שלכם.</div>
+    <p>אפשר גם להיכנס עם Google, מתחת ל"or". מי שנכנס ככה פעם שומר את כל הקבוצות וההיסטוריה שלו.</p>
+    <p>מספר הטלפון שלכם לא מוצג לאף אחד אחר בקבוצה.</p>
+  </section>
+
+  <section id="groups" style="--c: var(--yellow)">
+    <h2><span class="dot" aria-hidden="true"></span>קבוצה: לפתוח ולהזמין חברים</h2>
+    <p>קבוצה זה החבר'ה שאיתם משחקים בקביעות. כל ערב נשמר בתוך הקבוצה.</p>
+    <ol class="steps">
+      <li><strong>לפתוח קבוצה:</strong> במסך הראשי <span class="b y">+ Create Group</span>, נותנים שם (למשל "פוקר של חמישי") ו-<span class="b">Create</span>.</li>
+      <li><strong>להזמין:</strong> לוחצים על <span class="b">Share</span> הירוק ליד הקבוצה. נפתח וואטסאפ עם הודעה מוכנה וקישור. אתם בוחרים למי לשלוח ולוחצים שליחה.</li>
+      <li><strong>החבר לוחץ על הקישור,</strong> ממלא שם, מספר ו-PIN, ונכנס ישר לקבוצה. בלי להקליד קוד.</li>
+    </ol>
+    <p>לכל קבוצה יש גם קוד של 6 תווים (מופיע ליד שם הקבוצה). מי שקיבל רק את הקוד: <span class="b">Join Group</span> ומקליד אותו.</p>
+  </section>
+
+  <section id="managers" style="--c: var(--purple)">
+    <h2><span class="dot" aria-hidden="true"></span>מנהלים ושותפים</h2>
+    <p>מי שפתח את הקבוצה הוא המנהל. הוא יכול להפוך חברים נוספים למנהלים שותפים. מנהל יכול לנהל משחק מכל טלפון, גם משחק שמישהו אחר פתח.</p>
+    <p>בתוך הקבוצה לוחצים <span class="b">⚙ Manage</span>. ליד כל חבר:</p>
+    <ul>
+      <li><span class="b">+ Manager</span> להפוך למנהל, <span class="b">Demote</span> להוריד.</li>
+      <li><span class="b r">Remove</span> להוציא מהקבוצה.</li>
+      <li><span class="b">Reset PIN</span> למי ששכח את הקוד.</li>
+    </ul>
+    <p>בתחתית מסך הקבוצה: <span class="b r">Delete group</span> (רק למי שפתח את הקבוצה, מוחק גם את כל ההיסטוריה) או <span class="b r">Leave group</span> (לכל השאר).</p>
+  </section>
+
+  <section id="setup" style="--c: var(--coral)">
+    <h2><span class="dot" aria-hidden="true"></span>לפתוח ערב חדש</h2>
+    <ol class="steps">
+      <li>נכנסים לקבוצה ולוחצים <span class="b y">🎲 New Game</span>.</li>
+      <li><strong>Currency:</strong> שקל, דולר או יורו.</li>
+      <li><strong>Buy-in Amount:</strong> כמה כל אחד משלם כדי לשבת. כל סכום עובד.</li>
+      <li><strong>Chips per Buy-in:</strong> כמה צ'יפים מקבלים על הכניסה. האפליקציה מחשבת לבד כמה שווה צ'יפ אחד.</li>
+      <li><strong>Who's Playing:</strong> אתם כבר מסומנים. לוחצים על החברים שמשחקים. מי שלא בקבוצה: כותבים את השם תחת "Add a guest" ולוחצים <span class="b">Add</span>.</li>
+      <li>לוחצים <span class="b y">🎲 Start Game</span>. צריך לפחות 2 שחקנים.</li>
+    </ol>
+    <div class="example">
+      <strong>דוגמה:</strong> כניסה 100 ₪ = 200 צ'יפים. צ'יפ אחד שווה 0.50 ₪. מי שנשאר בסוף עם 500 צ'יפים מקבל 250 ₪.
+    </div>
+  </section>
+
+  <section id="play" style="--c: var(--mint)">
+    <h2><span class="dot" aria-hidden="true"></span>במהלך המשחק</h2>
+    <p>למעלה רואים כמה משחקים עכשיו (Active), כמה כסף נכנס (Total In) וכמה יצא (Cashed Out). כל שחקן מופיע כצ'יפ בצבע שלו, אותו צבע בכל הטלפונים.</p>
+
+    <h3>ריבאי (קנייה נוספת)</h3>
+    <p>לוחצים <span class="b">+ Rebuy</span> ליד השחקן. יש 6 סכומים מוכנים, או מקלידים כל סכום ב-<span class="b">Other amount...</span> ו-<span class="b">Add</span>.</p>
+
+    <h3>טעיתם?</h3>
+    <ul>
+      <li><strong>ריבאי בטעות:</strong> פותחים שוב את <span class="b">+ Rebuy</span> של אותו שחקן ולוחצים <span class="b r">↩ Undo last rebuy</span>.</li>
+      <li><strong>הוספתם שחקן בטעות</strong> (לפני שעשה ריבאי): ב-<span class="b">+ Rebuy</span> שלו, <span class="b">Added by mistake? Remove</span>. לוחצים פעמיים כדי לאשר.</li>
+    </ul>
+
+    <h3>מישהו מצטרף באמצע</h3>
+    <p><span class="b">+ Add Player</span> בתחתית המסך. בוחרים חבר מהקבוצה (ככה הסטטיסטיקות נשמרות על השם שלו) או כותבים שם של אורח. הוא נכנס עם כניסה רגילה.</p>
+
+    <h3>מישהו הולך הביתה מוקדם</h3>
+    <p>לוחצים <span class="b r">Out</span> ליד השם, מקלידים כמה צ'יפים יש לו, והאפליקציה מראה כמה זה בכסף. <span class="b">Cash Out</span> לאישור. הוא עובר לרשימת Cashed Out.</p>
+    <p><strong>חזר לשולחן, או שהוצאתם אותו בטעות?</strong> לוחצים <span class="b">↩ Back in</span> ליד השם שלו. הוא חוזר לשחק עם הצ'יפים שהיו לו.</p>
+
+    <div class="note"><b>טיפ:</b> הכפתורים <span class="b">+ Add Player</span> ו-<span class="b y">🏁 End Game</span> תמיד בתחתית המסך, גם כשיש הרבה שחקנים. המסך לא נכבה בזמן משחק.</div>
+  </section>
+
+  <section id="others" style="--c: var(--blue)">
+    <h2><span class="dot" aria-hidden="true"></span>מה החברים רואים בטלפון שלהם</h2>
+    <ul>
+      <li><strong>כשמתחילים משחק,</strong> הטלפון של כל חבר שנבחר נפתח לבד על המשחק (אם האפליקציה פתוחה אצלו).</li>
+      <li><strong>Watch Live:</strong> כל חבר בקבוצה רואה את המשחק מתעדכן בזמן אמת: כמה כל אחד קנה, מי יצא. הוא לא יכול לשנות כלום.</li>
+      <li><strong>מנהל שותף</strong> רואה גם <span class="b y">✏ Manage this game</span> ויכול לנהל מהטלפון שלו. אם שני מנהלים לוחצים באותה שנייה, השני מקבל הודעה לבדוק ולחזור על הלחיצה, ושום דבר לא נמחק.</li>
+      <li><strong>חזרתם לקבוצה באמצע ערב?</strong> למעלה יש פס "Game in progress". מנהל לוחץ <span class="b y">Manage game</span> וחוזר למשחק.</li>
+    </ul>
+  </section>
+
+  <section id="end" style="--c: var(--yellow)">
+    <h2><span class="dot" aria-hidden="true"></span>סוף הערב: ספירה וחשבון</h2>
+    <ol class="steps">
+      <li>לוחצים <span class="b y">🏁 End Game</span> ומאשרים.</li>
+      <li><strong>Final Chip Count:</strong> מקלידים כמה צ'יפים יש לכל אחד. נפתחת מקלדת מספרים, ו-"הבא" במקלדת קופץ לשחקן הבא.</li>
+      <li>למעלה, שלושה מספרים נשארים על המסך כל הזמן: <strong>Bought</strong> (כמה צ'יפים נקנו), <strong>Counted</strong> (כמה ספרתם), <strong>Difference</strong> (ההפרש). ירוק = מסתדר.</li>
+      <li>לוחצים <span class="b y">Calculate Settlement</span>.</li>
+      <li>במסך <strong>Game Over</strong> רואים <strong>Transfer Instructions</strong>: מי מעביר כמה ולמי, במינימום העברות. מתחת: הדירוג של כולם.</li>
+      <li>טעות בספירה? <span class="b">← Edit</span> חוזר לספירה.</li>
+      <li>הכל נכון? <span class="b y">Finish Game</span> ואז <span class="b y">Save & Finish</span>. הערב נשמר בהיסטוריה ואי אפשר לשנות אותו יותר.</li>
+      <li><span class="b">📲 Share results on WhatsApp</span> פותח וואטסאפ עם הסיכום ומי משלם למי. אתם בוחרים קבוצה ושולחים.</li>
+    </ol>
+
+    <h3>הספירה לא מסתדרת (צ'יפ נפל מתחת לשולחן)</h3>
+    <p>האפליקציה כותבת כמה צ'יפים חסרים או מיותרים. אפשר לספור שוב, או ללחוץ על <span class="b">Split ₪… between the players at the table</span>: ההפרש מתחלק שווה בשווה בין מי שישב עד הסוף, וליד כל אחד כתוב "chip split".</p>
+  </section>
+
+  <section id="history" style="--c: var(--purple)">
+    <h2><span class="dot" aria-hidden="true"></span>היסטוריה וסטטיסטיקות</h2>
+    <p>בתוך הקבוצה, מתחת לכפתור New Game:</p>
+    <ul>
+      <li><strong>Game History:</strong> כל הערבים שנשמרו, עם התאריך, הקופה והמנצח. לוחצים על ערב כדי לראות את כל הפרטים ומי שילם למי.</li>
+      <li><strong>Player Stats:</strong> טבלת כל הזמנים. כמה ערבים כל אחד שיחק, אחוז ערבים ברווח, הערב הכי טוב, וסך הכל רווח או הפסד.</li>
+    </ul>
+  </section>
+
+  <section id="signal" style="--c: var(--coral)">
+    <h2><span class="dot" aria-hidden="true"></span>בלי קליטה, טלפון שנכבה, כפתור חזור</h2>
+    <dl>
+      <div>
+        <dt>אין קליטה</dt>
+        <dd>מופיע פס אדום "No connection". ממשיכים לעבוד רגיל. הכל נשמר בטלפון ונשלח לבד כשהקליטה חוזרת.</dd>
+      </div>
+      <div>
+        <dt>האפליקציה נסגרה באמצע ערב</dt>
+        <dd>פותחים אותה שוב, והיא חוזרת ישר למשחק שניהלתם.</dd>
+      </div>
+      <div>
+        <dt>כפתור חזור של הטלפון</dt>
+        <dd>חוזר צעד אחד אחורה בתוך האפליקציה (משחק, קבוצה, רשימת קבוצות) ולא סוגר אותה.</dd>
+      </div>
+      <div>
+        <dt>פתיחה ראשונה של הערב איטית</dt>
+        <dd>אם השרת "נרדם" אחרי זמן בלי שימוש, הפתיחה הראשונה יכולה לקחת קצת זמן. אחרי זה הכל מהיר.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <section id="faq" style="--c: var(--mint)">
+    <h2><span class="dot" aria-hidden="true"></span>שאלות מהשולחן</h2>
+    <dl>
+      <div>
+        <dt>חבר צריך חשבון כדי לשחק?</dt>
+        <dd>לא. אפשר להוסיף אותו כאורח עם שם בלבד. חשבון צריך רק כדי לראות את המשחק בטלפון שלו ולשמור סטטיסטיקות.</dd>
+      </div>
+      <div>
+        <dt>אפשר לשחק בדולרים?</dt>
+        <dd>כן. בוחרים מטבע ב-Currency כשפותחים ערב. כל סכום כניסה עובד.</dd>
+      </div>
+      <div>
+        <dt>מישהו קנה בסכום מוזר, למשל 70?</dt>
+        <dd>ב-<span class="b">+ Rebuy</span>, מקלידים 70 ב-<span class="b">Other amount...</span> ולוחצים <span class="b">Add</span>.</dd>
+      </div>
+      <div>
+        <dt>מי יכול לראות את המשחקים שלנו?</dt>
+        <dd>רק מי שבתוך הקבוצה. מספרי הטלפון לא מוצגים לאף אחד.</dd>
+      </div>
+      <div>
+        <dt>שני מנהלים בשני טלפונים?</dt>
+        <dd>עובד. כל לחיצה מופיעה אצל השני תוך שנייה.</dd>
+      </div>
+    </dl>
+  </section>
+
+  <footer>מדריך לגרסה מ-22 באוקטובר 2026. כשנוסיף פיצ'רים חדשים, המדריך יתעדכן.</footer>
+</div>
+</body>
+</html>

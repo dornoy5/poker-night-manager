@@ -163,6 +163,9 @@ export default function LoginScreen() {
         />
       </div>
       <p className="login__fine">Only people in your group can see your games. Your number is never shown to anyone.</p>
+      <p className="login__fine" style={{ marginTop: '8px' }}>
+        <a href="/guide.html" style={{ color: 'var(--gold)', fontWeight: 600 }}>How it works (מדריך בעברית)</a>
+      </p>
     </div>
   );
 }

@@ -109,6 +109,10 @@ export default function GroupsScreen({ onSelectGroup }) {
                 </button>
             </div>
 
+            <a className="btn btn--secondary btn--full" href="/guide.html" style={{ marginBottom: '14px', textDecoration: 'none' }}>
+                📖 How it works (מדריך בעברית)
+            </a>
+
             <div className="card">
                 <div className="card__title">🎯 Your Groups</div>
 

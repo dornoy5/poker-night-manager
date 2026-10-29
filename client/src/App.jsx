@@ -79,6 +79,18 @@ function GameContent({ onBackToGroup, group, runningGame }) {
           >
             ← {group?.name}
           </button>
+          {/* Opens in a new tab so the running game stays exactly where it is */}
+          <a
+            className="btn btn--secondary btn--small"
+            href="/guide.html"
+            target="_blank"
+            rel="noopener"
+            aria-label="How it works"
+            title="How it works"
+            style={{ minWidth: '40px', padding: '8px 12px', textDecoration: 'none' }}
+          >
+            ?
+          </a>
         </div>
         <h1 className="header__logo">Poker Night</h1>
         <p className="header__subtitle">Game Manager</p>
