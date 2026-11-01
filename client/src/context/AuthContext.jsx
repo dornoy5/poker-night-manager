@@ -38,8 +38,11 @@ export function AuthProvider({ children }) {
     setUser(null);
   };
 
+  // After a profile change: show the new details everywhere without signing in again
+  const updateUser = (changes) => setUser((prev) => (prev ? { ...prev, ...changes } : prev));
+
   return (
-    <AuthContext.Provider value={{ user, loading, login, logout }}>
+    <AuthContext.Provider value={{ user, loading, login, logout, updateUser }}>
       {children}
     </AuthContext.Provider>
   );

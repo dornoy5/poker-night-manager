@@ -8,6 +8,7 @@ import GroupsScreen from './components/GroupsScreen';
 import GroupDetailScreen from './components/GroupDetailScreen';
 import GameHistoryDetailScreen from './components/GameHistoryDetailScreen';
 import LiveObserverScreen from './components/LiveObserverScreen';
+import ProfileScreen from './components/ProfileScreen';
 import SetupScreen from './components/SetupScreen';
 import GameScreen, { SaveStatusBanner } from './components/GameScreen';
 import CashoutScreen from './components/CashoutScreen';
@@ -15,6 +16,7 @@ import SettlementScreen from './components/SettlementScreen';
 import { useState, useEffect, useCallback, useRef } from 'react';
 import { getGroups, getGroup, joinGroup } from './api/authApi';
 import { getGame } from './api/gameApi';
+import { needsRealName } from './utils/helpers';
 import { useSocket } from './context/SocketContext';
 import { useToast } from './context/ToastContext';
 
@@ -131,7 +133,7 @@ function GameContent({ onBackToGroup, group, runningGame }) {
 
 // view: 'groups' | 'detail' | 'game' | 'history' | 'observer'
 // Where the phone's Back button (and the in-app back buttons) lead from each screen
-const PARENT_VIEW = { groups: 'groups', detail: 'groups', game: 'detail', history: 'detail', observer: 'detail' };
+const PARENT_VIEW = { groups: 'groups', detail: 'groups', game: 'detail', history: 'detail', observer: 'detail', profile: 'groups' };
 
 // An invite link looks like /?join=ABC123. Remember the code through the Google sign-in.
 function capturePendingJoin() {
@@ -193,6 +195,15 @@ function AppContent() {
         navigate('game');
       })
       .catch(() => {});
+  }, [user, navigate]);
+
+  // Someone whose name is still an email address gets asked for a real name, once per visit
+  const askedNameRef = useRef(false);
+  useEffect(() => {
+    if (!user || askedNameRef.current || !needsRealName(user)) return;
+    askedNameRef.current = true;
+    // After this render, so any invite-link or resume navigation settles first
+    Promise.resolve().then(() => navigate('profile'));
   }, [user, navigate]);
 
   // Finish an invite link once the user is signed in
@@ -261,10 +272,15 @@ function AppContent() {
 
   if (!user) return <LoginScreen />;
 
+  if (view === 'profile') {
+    return <ProfileScreen onBack={goBack} />;
+  }
+
   if (view === 'groups') {
     return (
       <GroupsScreen
         key={groupsKey}
+        onOpenProfile={() => navigate('profile')}
         onSelectGroup={(group) => {
           setSelectedGroup(group);
           navigate('detail');

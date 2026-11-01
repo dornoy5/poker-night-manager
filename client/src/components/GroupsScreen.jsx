@@ -4,8 +4,8 @@ import { useToast } from '../context/ToastContext';
 import { getGroups, createGroup, joinGroup } from '../api/authApi';
 import { getInitials, chipStyle } from '../utils/helpers';
 
-export default function GroupsScreen({ onSelectGroup }) {
-    const { user, logout } = useAuth();
+export default function GroupsScreen({ onSelectGroup, onOpenProfile }) {
+    const { user } = useAuth();
     const showToast = useToast();
     const [groups, setGroups] = useState([]);
     const [showCreate, setShowCreate] = useState(false);
@@ -75,13 +75,22 @@ export default function GroupsScreen({ onSelectGroup }) {
                 <div className="header__suits">♠ ♥ ♦ ♣</div>
             </header>
 
-            <div
+            {/* Your card opens your profile (name, PIN, log out) */}
+            <button
+                type="button"
                 className="card"
+                onClick={onOpenProfile}
+                aria-label="Open your profile"
                 style={{
                     display: 'flex',
                     alignItems: 'center',
                     gap: '12px',
                     padding: '16px 20px',
+                    width: '100%',
+                    textAlign: 'left',
+                    color: 'inherit',
+                    font: 'inherit',
+                    cursor: 'pointer',
                 }}
             >
                 {user.picture ? (
@@ -98,16 +107,14 @@ export default function GroupsScreen({ onSelectGroup }) {
                 ) : (
                     <div className="player-row__avatar" style={chipStyle(user.name)}>{getInitials(user.name)}</div>
                 )}
-                <div style={{ flex: 1 }}>
-                    <div style={{ fontWeight: 600, fontSize: '0.95rem' }}>{user.name}</div>
-                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)' }}>
+                <div style={{ flex: 1, minWidth: 0 }}>
+                    <div style={{ fontWeight: 700, fontSize: '1rem', overflowWrap: 'anywhere' }}>{user.name}</div>
+                    <div style={{ fontSize: '0.85rem', color: 'var(--text-muted)', overflowWrap: 'anywhere' }}>
                         {user.phoneNumber || user.email}
                     </div>
                 </div>
-                <button className="btn btn--secondary btn--small" onClick={logout}>
-                    Log out
-                </button>
-            </div>
+                <span className="btn btn--secondary btn--small" aria-hidden="true">✏ Profile</span>
+            </button>
 
             <a className="btn btn--secondary btn--full" href="/guide.html" style={{ marginBottom: '14px', textDecoration: 'none' }}>
                 📖 How it works (מדריך בעברית)

@@ -118,3 +118,7 @@ export function roundMoney(value) {
 export function roundToNearest50(value) {
   return Math.round(value / 50) * 50;
 }
+// A name with an @ is an email address that ended up as the name (old Google sign-ins)
+export function needsRealName(user) {
+  return !!user && (!user.name || user.name.includes('@'));
+}

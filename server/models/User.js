@@ -6,7 +6,9 @@ const userSchema = new mongoose.Schema(
     // sparse: many users may lack one of them without clashing on the unique index.
     googleId: { type: String, unique: true, sparse: true },
     email: { type: String, unique: true, sparse: true },
-    name: { type: String, required: true },
+    name: { type: String, required: true }, // what the group sees: first + last name
+    firstName: { type: String, default: '' },
+    lastName: { type: String, default: '' },
     picture: { type: String, default: '' },
     phone: { type: String, default: '' },
 

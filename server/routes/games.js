@@ -2,6 +2,7 @@ const express = require('express');
 const router = express.Router();
 const Game = require('../models/Game');
 const Group = require('../models/Group');
+const User = require('../models/User');
 const { auth, isMemberOf, isManagerOf } = require('../middleware/auth');
 
 // The only fields a client may set on a game. Everything else (createdBy, groupId, rev) is server-owned.
@@ -46,6 +47,32 @@ async function notifyGameStarted(req, game) {
     });
 }
 
+// A player linked to an account always shows that account's current name, so a phone
+// still holding an old name can't put it back into the game. Who-pays-whom uses names
+// too, so those follow the same renames.
+async function useProfileNames(fields) {
+  const players = fields.players;
+  if (!Array.isArray(players)) return;
+  const ids = players.filter((p) => p && p.userId).map((p) => String(p.userId));
+  if (!ids.length) return;
+  const users = await User.find({ _id: { $in: ids } }).select('name');
+  const names = new Map(users.map((u) => [String(u._id), u.name]));
+  const renamed = new Map();
+  players.forEach((p) => {
+    const current = p && p.userId && names.get(String(p.userId));
+    if (current && current !== p.name) {
+      renamed.set(p.name, current);
+      p.name = current;
+    }
+  });
+  if (renamed.size && Array.isArray(fields.settlements)) {
+    fields.settlements.forEach((s) => {
+      if (renamed.has(s.from)) s.from = renamed.get(s.from);
+      if (renamed.has(s.to)) s.to = renamed.get(s.to);
+    });
+  }
+}
+
 function isCreator(game, userId) {
   return game.createdBy && game.createdBy.toString() === userId;
 }
@@ -76,6 +103,7 @@ router.post('/', auth, async (req, res) => {
     const fields = pickEditable(req.body);
     const invalid = validate(fields);
     if (invalid) return res.status(400).json({ error: invalid });
+    await useProfileNames(fields);
 
     const game = new Game({ ...fields, groupId: group._id, createdBy: req.userId, rev: 0 });
     const saved = await game.save();
@@ -130,6 +158,7 @@ router.put('/:id', auth, async (req, res) => {
     const fields = pickEditable(req.body);
     const invalid = validate(fields);
     if (invalid) return res.status(400).json({ error: invalid });
+    await useProfileNames(fields);
 
     const currentRev = game.rev || 0;
     if (req.body.rev !== undefined && Number(req.body.rev) !== currentRev) {

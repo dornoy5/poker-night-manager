@@ -55,6 +55,24 @@ export async function resetMemberPin(groupId, memberId) {
   return handleResponse(res);
 }
 
+export async function updateProfile(firstName, lastName) {
+  const res = await fetch(`${API_URL}/auth/me`, {
+    method: 'PATCH',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ firstName, lastName }),
+  });
+  return handleResponse(res);
+}
+
+export async function changePin(currentPin, newPin) {
+  const res = await fetch(`${API_URL}/auth/me/pin`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json', ...getAuthHeaders() },
+    body: JSON.stringify({ currentPin, newPin }),
+  });
+  return handleResponse(res);
+}
+
 export async function getMe() {
   const res = await fetch(`${API_URL}/auth/me`, {
     headers: getAuthHeaders(),
